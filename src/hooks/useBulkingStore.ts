@@ -6,6 +6,7 @@ const defaultGoals: UserGoals = {
   currentWeight: 65,
   dailyCalories: 3000,
   dailyProtein: 150,
+  startDate: "2026-02-01",
 };
 
 const defaultMeals: Meal[] = [
@@ -18,6 +19,7 @@ const defaultMeals: Meal[] = [
       { id: "f2", name: "Telur Rebus (3)", calories: 210, protein: 18, carbs: 2, fat: 15 },
       { id: "f3", name: "Susu Full Cream", calories: 150, protein: 8, carbs: 12, fat: 8 },
     ],
+    completed: false,
   },
   {
     id: "2",
@@ -28,6 +30,7 @@ const defaultMeals: Meal[] = [
       { id: "f5", name: "Dada Ayam 200g", calories: 330, protein: 62, carbs: 0, fat: 7 },
       { id: "f6", name: "Sayur Brokoli", calories: 55, protein: 4, carbs: 11, fat: 1 },
     ],
+    completed: false,
   },
   {
     id: "3",
@@ -37,6 +40,7 @@ const defaultMeals: Meal[] = [
       { id: "f7", name: "Pisang (2)", calories: 210, protein: 3, carbs: 54, fat: 1 },
       { id: "f8", name: "Selai Kacang 2 sdm", calories: 190, protein: 7, carbs: 7, fat: 16 },
     ],
+    completed: false,
   },
   {
     id: "4",
@@ -47,13 +51,12 @@ const defaultMeals: Meal[] = [
       { id: "f10", name: "Ikan Salmon 150g", calories: 280, protein: 34, carbs: 0, fat: 16 },
       { id: "f11", name: "Kentang Rebus", calories: 130, protein: 3, carbs: 30, fat: 0 },
     ],
+    completed: false,
   },
 ];
 
 const defaultWeightHistory: WeightEntry[] = [
-  { date: "2026-01-14", weight: 63 },
-  { date: "2026-01-21", weight: 63.5 },
-  { date: "2026-01-28", weight: 64 },
+  { date: "2026-02-01", weight: 63 },
   { date: "2026-02-04", weight: 64.3 },
   { date: "2026-02-11", weight: 65 },
 ];
@@ -63,10 +66,12 @@ export function useBulkingStore() {
   const [goals, setGoals] = useState<UserGoals>(defaultGoals);
   const [weightHistory, setWeightHistory] = useState<WeightEntry[]>(defaultWeightHistory);
 
-  const totalCalories = meals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.calories, 0), 0);
-  const totalProtein = meals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.protein, 0), 0);
-  const totalCarbs = meals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.carbs, 0), 0);
-  const totalFat = meals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.fat, 0), 0);
+  // Derive totals only from completed meals
+  const completedMeals = meals.filter(m => m.completed);
+  const totalCalories = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.calories, 0), 0);
+  const totalProtein = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.protein, 0), 0);
+  const totalCarbs = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.carbs, 0), 0);
+  const totalFat = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.fat, 0), 0);
 
   const addFoodToMeal = useCallback((mealId: string, food: FoodItem) => {
     setMeals((prev) =>
@@ -90,13 +95,27 @@ export function useBulkingStore() {
     setMeals((prev) => prev.filter((m) => m.id !== mealId));
   }, []);
 
-  const addWeightEntry = useCallback((entry: WeightEntry) => {
-    setWeightHistory((prev) => [...prev, entry].sort((a, b) => a.date.localeCompare(b.date)));
+  const toggleMealCompletion = useCallback((mealId: string) => {
+    setMeals((prev) =>
+      prev.map((m) => (m.id === mealId ? { ...m, completed: !m.completed } : m))
+    );
   }, []);
 
-  const weightProgress = goals.targetWeight > 0
-    ? Math.min(100, ((goals.currentWeight - (weightHistory[0]?.weight || goals.currentWeight)) / (goals.targetWeight - (weightHistory[0]?.weight || goals.currentWeight))) * 100)
+  const addWeightEntry = useCallback((entry: WeightEntry) => {
+    setWeightHistory((prev) => {
+      const filtered = prev.filter(e => e.date !== entry.date);
+      return [...filtered, entry].sort((a, b) => a.date.localeCompare(b.date));
+    });
+  }, []);
+
+  const initialWeight = weightHistory[0]?.weight || goals.currentWeight;
+  const currentWeight = weightHistory[weightHistory.length - 1]?.weight || goals.currentWeight;
+
+  const weightProgress = goals.targetWeight > initialWeight
+    ? Math.min(100, Math.max(0, ((currentWeight - initialWeight) / (goals.targetWeight - initialWeight)) * 100))
     : 0;
+
+  const daysElapsed = Math.floor((new Date().getTime() - new Date(goals.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   return {
     meals,
@@ -107,11 +126,14 @@ export function useBulkingStore() {
     totalProtein,
     totalCarbs,
     totalFat,
+    currentWeight,
     addFoodToMeal,
     removeFoodFromMeal,
     addMeal,
     removeMeal,
+    toggleMealCompletion,
     addWeightEntry,
-    weightProgress: Math.max(0, weightProgress),
+    weightProgress,
+    daysElapsed,
   };
 }

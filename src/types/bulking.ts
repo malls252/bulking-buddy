@@ -12,6 +12,7 @@ export interface Meal {
   name: string;
   time: string;
   foods: FoodItem[];
+  completed: boolean;
 }
 
 export interface DayLog {
@@ -30,4 +31,5 @@ export interface UserGoals {
   currentWeight: number;
   dailyCalories: number;
   dailyProtein: number;
+  startDate: string;
 }

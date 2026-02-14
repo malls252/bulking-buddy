@@ -20,6 +20,8 @@ const Index = () => {
             totalFat={store.totalFat}
             goals={store.goals}
             weightProgress={store.weightProgress}
+            daysElapsed={store.daysElapsed}
+            currentWeight={store.currentWeight}
           />
         )}
         {activeTab === "meals" && (
@@ -29,6 +31,7 @@ const Index = () => {
             removeFoodFromMeal={store.removeFoodFromMeal}
             addMeal={store.addMeal}
             removeMeal={store.removeMeal}
+            toggleMealCompletion={store.toggleMealCompletion}
           />
         )}
         {activeTab === "progress" && (
@@ -37,6 +40,7 @@ const Index = () => {
             goals={store.goals}
             addWeightEntry={store.addWeightEntry}
             weightProgress={store.weightProgress}
+            setGoals={store.setGoals}
           />
         )}
       </div>

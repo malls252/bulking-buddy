@@ -10,6 +10,8 @@ interface DashboardViewProps {
   totalFat: number;
   goals: UserGoals;
   weightProgress: number;
+  daysElapsed: number;
+  currentWeight: number;
 }
 
 export default function DashboardView({
@@ -19,6 +21,8 @@ export default function DashboardView({
   totalFat,
   goals,
   weightProgress,
+  daysElapsed,
+  currentWeight,
 }: DashboardViewProps) {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -26,7 +30,12 @@ export default function DashboardView({
         <h1 className="text-2xl font-bold">
           Halo, <span className="text-gradient">Bulk King</span> 💪
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Ayo capai target hari ini!</p>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-sm text-muted-foreground transition-all animate-fade-in">Ayo capai target hari ini!</p>
+          <span className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
+            Hari Ke-{daysElapsed}
+          </span>
+        </div>
       </div>
 
       {/* Calorie Ring */}
@@ -55,7 +64,7 @@ export default function DashboardView({
             <Dumbbell className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Berat Badan</span>
           </div>
-          <p className="text-2xl font-bold">{goals.currentWeight} <span className="text-sm font-normal text-muted-foreground">kg</span></p>
+          <p className="text-2xl font-bold">{currentWeight} <span className="text-sm font-normal text-muted-foreground">kg</span></p>
           <p className="text-[10px] text-muted-foreground">target {goals.targetWeight} kg</p>
         </div>
       </div>

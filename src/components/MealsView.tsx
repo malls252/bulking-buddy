@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, Plus, Trash2, X } from "lucide-react";
+import { Clock, Plus, Trash2, X, CheckCircle2, Circle } from "lucide-react";
 import type { Meal, FoodItem } from "@/types/bulking";
 
 interface MealsViewProps {
@@ -8,9 +8,17 @@ interface MealsViewProps {
   removeFoodFromMeal: (mealId: string, foodId: string) => void;
   addMeal: (meal: Meal) => void;
   removeMeal: (mealId: string) => void;
+  toggleMealCompletion: (mealId: string) => void;
 }
 
-export default function MealsView({ meals, addFoodToMeal, removeFoodFromMeal, addMeal, removeMeal }: MealsViewProps) {
+export default function MealsView({
+  meals,
+  addFoodToMeal,
+  removeFoodFromMeal,
+  addMeal,
+  removeMeal,
+  toggleMealCompletion
+}: MealsViewProps) {
   const [showAddFood, setShowAddFood] = useState<string | null>(null);
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [newFood, setNewFood] = useState({ name: "", calories: "", protein: "", carbs: "", fat: "" });
@@ -37,6 +45,7 @@ export default function MealsView({ meals, addFoodToMeal, removeFoodFromMeal, ad
       name: newMeal.name,
       time: newMeal.time,
       foods: [],
+      completed: false,
     });
     setNewMeal({ name: "", time: "12:00" });
     setShowAddMeal(false);
@@ -83,13 +92,30 @@ export default function MealsView({ meals, addFoodToMeal, removeFoodFromMeal, ad
       {meals.map((meal) => {
         const mealCal = meal.foods.reduce((s, f) => s + f.calories, 0);
         return (
-          <div key={meal.id} className="glass-card rounded-xl p-4 space-y-3">
+          <div
+            key={meal.id}
+            className={`glass-card rounded-xl p-4 space-y-3 transition-opacity duration-300 ${meal.completed ? "opacity-60" : "opacity-100"}`}
+          >
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold">{meal.name}</h3>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                  <Clock className="h-3 w-3" /> {meal.time}
-                  <span className="ml-2">{mealCal} kcal</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => toggleMealCompletion(meal.id)}
+                  className={`transition-colors ${meal.completed ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+                >
+                  {meal.completed ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : (
+                    <Circle className="h-5 w-5" />
+                  )}
+                </button>
+                <div>
+                  <h3 className={`font-semibold transition-all ${meal.completed ? "text-muted-foreground line-through" : ""}`}>
+                    {meal.name}
+                  </h3>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                    <Clock className="h-3 w-3" /> {meal.time}
+                    <span className="ml-2">{mealCal} kcal</span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
