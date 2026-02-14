@@ -1,5 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Meal, FoodItem, WeightEntry, UserGoals } from "@/types/bulking";
+
+const STORAGE_KEYS = {
+  MEALS: "bulking-meals",
+  GOALS: "bulking-goals",
+  WEIGHT_HISTORY: "bulking-weight-history",
+};
 
 const defaultGoals: UserGoals = {
   targetWeight: 75,
@@ -62,9 +68,34 @@ const defaultWeightHistory: WeightEntry[] = [
 ];
 
 export function useBulkingStore() {
-  const [meals, setMeals] = useState<Meal[]>(defaultMeals);
-  const [goals, setGoals] = useState<UserGoals>(defaultGoals);
-  const [weightHistory, setWeightHistory] = useState<WeightEntry[]>(defaultWeightHistory);
+  // Load initial state from localStorage or use defaults
+  const [meals, setMeals] = useState<Meal[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.MEALS);
+    return saved ? JSON.parse(saved) : defaultMeals;
+  });
+
+  const [goals, setGoals] = useState<UserGoals>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
+    return saved ? JSON.parse(saved) : defaultGoals;
+  });
+
+  const [weightHistory, setWeightHistory] = useState<WeightEntry[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
+    return saved ? JSON.parse(saved) : defaultWeightHistory;
+  });
+
+  // Save to localStorage when state changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MEALS, JSON.stringify(meals));
+  }, [meals]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
+  }, [goals]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.WEIGHT_HISTORY, JSON.stringify(weightHistory));
+  }, [weightHistory]);
 
   // Derive totals only from completed meals
   const completedMeals = meals.filter(m => m.completed);
