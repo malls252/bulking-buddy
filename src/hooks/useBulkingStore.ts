@@ -62,39 +62,130 @@ const defaultMeals: Meal[] = [
 ];
 
 const defaultWeightHistory: WeightEntry[] = [
-  { date: "2026-02-01", weight: 63 },
-  { date: "2026-02-04", weight: 64.3 },
-  { date: "2026-02-11", weight: 65 },
+  { id: "1", date: "2026-02-01", weight: 63 },
+  { id: "2", date: "2026-02-04", weight: 64.3 },
+  { id: "3", date: "2026-02-11", weight: 65 },
 ];
 
 export function useBulkingStore() {
-  // Load initial state from localStorage or use defaults
-  const [meals, setMeals] = useState<Meal[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.MEALS);
-    return saved ? JSON.parse(saved) : defaultMeals;
-  });
+  const [meals, setMeals] = useState<Meal[]>(defaultMeals);
+  const [goals, setGoals] = useState<UserGoals>(defaultGoals);
+  const [weightHistory, setWeightHistory] = useState<WeightEntry[]>(defaultWeightHistory);
+  const [loading, setLoading] = useState(true);
 
-  const [goals, setGoals] = useState<UserGoals>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
-    return saved ? JSON.parse(saved) : defaultGoals;
-  });
-
-  const [weightHistory, setWeightHistory] = useState<WeightEntry[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
-    return saved ? JSON.parse(saved) : defaultWeightHistory;
-  });
-
-  // Save to localStorage when state changes
+  // Fetch initial data from API
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MEALS, JSON.stringify(meals));
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [mealsRes, goalsRes, weightRes] = await Promise.all([
+          fetch("/api/meals"),
+          fetch("/api/goals"),
+          fetch("/api/weight"),
+        ]);
+
+        const mealsData = await mealsRes.json();
+        const goalsData = await goalsRes.json();
+        const weightData = await weightRes.json();
+
+        if (mealsData && mealsData.length > 0) setMeals(mealsData);
+        if (goalsData) setGoals(goalsData);
+        if (weightData) {
+          // Compatibility: ensure IDs exist
+          setWeightHistory(weightData.map((e: any, i: number) => ({
+            ...e,
+            id: e.id || `${e.date}-${i}`,
+            weight: Number(e.weight) // Ensure weight is numeric
+          })));
+        }
+      } catch (error) {
+        console.error("Failed to fetch data from Vercel:", error);
+        // Fallback to localStorage if API fails (optional, but good for local dev)
+        const savedMeals = localStorage.getItem(STORAGE_KEYS.MEALS);
+        const savedGoals = localStorage.getItem(STORAGE_KEYS.GOALS);
+        const savedWeight = localStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
+        if (savedMeals) setMeals(JSON.parse(savedMeals));
+        if (savedGoals) setGoals(JSON.parse(savedGoals));
+        if (savedWeight) setWeightHistory(JSON.parse(savedWeight));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Sync to database and localStorage
+  const saveGoals = async (newGoals: UserGoals) => {
+    setGoals(newGoals);
+    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(newGoals));
+    await fetch("/api/goals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newGoals),
+    });
+  };
+
+  const syncMeal = async (meal: Meal) => {
+    localStorage.setItem(STORAGE_KEYS.MEALS, JSON.stringify(meals.map(m => m.id === meal.id ? meal : m)));
+    await fetch("/api/meals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(meal),
+    });
+  };
+
+  const addFoodToMeal = useCallback(async (mealId: string, food: FoodItem) => {
+    const meal = meals.find(m => m.id === mealId);
+    if (!meal) return;
+
+    const updatedMeal = { ...meal, foods: [...meal.foods, food] };
+    setMeals(prev => prev.map(m => (m.id === mealId ? updatedMeal : m)));
+    await syncMeal(updatedMeal);
   }, [meals]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
-  }, [goals]);
+  const removeFoodFromMeal = useCallback(async (mealId: string, foodId: string) => {
+    const meal = meals.find(m => m.id === mealId);
+    if (!meal) return;
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.WEIGHT_HISTORY, JSON.stringify(weightHistory));
+    const updatedMeal = { ...meal, foods: meal.foods.filter(f => f.id !== foodId) };
+    setMeals(prev => prev.map(m => (m.id === mealId ? updatedMeal : m)));
+    await syncMeal(updatedMeal);
+  }, [meals]);
+
+  const addMeal = useCallback(async (meal: Meal) => {
+    setMeals(prev => [...prev, meal]);
+    await syncMeal(meal);
+  }, [meals]);
+
+  const removeMeal = useCallback(async (mealId: string) => {
+    setMeals(prev => prev.filter(m => m.id !== mealId));
+    await fetch(`/api/meals?id=${mealId}`, { method: "DELETE" });
+  }, []);
+
+  const toggleMealCompletion = useCallback(async (mealId: string) => {
+    const meal = meals.find(m => m.id === mealId);
+    if (!meal) return;
+
+    const completed = !meal.completed;
+    setMeals(prev => prev.map(m => (m.id === mealId ? { ...m, completed } : m)));
+
+    await fetch("/api/meals", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: mealId, completed }),
+    });
+  }, [meals]);
+
+  const addWeightEntry = useCallback(async (entry: WeightEntry) => {
+    setWeightHistory(prev => [...prev, entry].sort((a, b) => a.date.localeCompare(b.date)));
+    localStorage.setItem(STORAGE_KEYS.WEIGHT_HISTORY, JSON.stringify([...weightHistory, entry]));
+
+    await fetch("/api/weight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    });
   }, [weightHistory]);
 
   // Derive totals only from completed meals
@@ -103,41 +194,6 @@ export function useBulkingStore() {
   const totalProtein = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.protein, 0), 0);
   const totalCarbs = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.carbs, 0), 0);
   const totalFat = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.fat, 0), 0);
-
-  const addFoodToMeal = useCallback((mealId: string, food: FoodItem) => {
-    setMeals((prev) =>
-      prev.map((m) => (m.id === mealId ? { ...m, foods: [...m.foods, food] } : m))
-    );
-  }, []);
-
-  const removeFoodFromMeal = useCallback((mealId: string, foodId: string) => {
-    setMeals((prev) =>
-      prev.map((m) =>
-        m.id === mealId ? { ...m, foods: m.foods.filter((f) => f.id !== foodId) } : m
-      )
-    );
-  }, []);
-
-  const addMeal = useCallback((meal: Meal) => {
-    setMeals((prev) => [...prev, meal]);
-  }, []);
-
-  const removeMeal = useCallback((mealId: string) => {
-    setMeals((prev) => prev.filter((m) => m.id !== mealId));
-  }, []);
-
-  const toggleMealCompletion = useCallback((mealId: string) => {
-    setMeals((prev) =>
-      prev.map((m) => (m.id === mealId ? { ...m, completed: !m.completed } : m))
-    );
-  }, []);
-
-  const addWeightEntry = useCallback((entry: WeightEntry) => {
-    setWeightHistory((prev) => {
-      const filtered = prev.filter(e => e.date !== entry.date);
-      return [...filtered, entry].sort((a, b) => a.date.localeCompare(b.date));
-    });
-  }, []);
 
   const initialWeight = weightHistory[0]?.weight || goals.currentWeight;
   const currentWeight = weightHistory[weightHistory.length - 1]?.weight || goals.currentWeight;
@@ -151,7 +207,7 @@ export function useBulkingStore() {
   return {
     meals,
     goals,
-    setGoals,
+    setGoals: saveGoals,
     weightHistory,
     totalCalories,
     totalProtein,
@@ -166,5 +222,6 @@ export function useBulkingStore() {
     addWeightEntry,
     weightProgress,
     daysElapsed,
+    loading,
   };
 }

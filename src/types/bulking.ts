@@ -22,8 +22,10 @@ export interface DayLog {
 }
 
 export interface WeightEntry {
+  id: string;
   date: string;
   weight: number;
+  image?: string;
 }
 
 export interface UserGoals {

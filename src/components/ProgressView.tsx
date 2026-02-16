@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
-import { Plus, Scale, TrendingUp, Target, Edit2 } from "lucide-react";
+import { Plus, Scale, TrendingUp, Target, Edit2, Camera, X } from "lucide-react";
 import type { WeightEntry, UserGoals } from "@/types/bulking";
 
 interface ProgressViewProps {
@@ -21,6 +21,18 @@ export default function ProgressView({
   const [showAdd, setShowAdd] = useState(false);
   const [showEditTarget, setShowEditTarget] = useState(false);
   const [newWeight, setNewWeight] = useState("");
+  const [newImage, setNewImage] = useState<string | null>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Temp states for editing goals
   const [tempGoals, setTempGoals] = useState({
@@ -32,10 +44,13 @@ export default function ProgressView({
   const handleAdd = () => {
     if (!newWeight) return;
     addWeightEntry({
+      id: Date.now().toString(),
       date: new Date().toISOString().split("T")[0],
       weight: Number(newWeight),
+      image: newImage || undefined,
     });
     setNewWeight("");
+    setNewImage(null);
     setShowAdd(false);
   };
 
@@ -55,9 +70,9 @@ export default function ProgressView({
     }
   };
 
-  const chartData = weightHistory.map((e) => ({
-    date: e.date.slice(5),
-    berat: e.weight,
+  const chartData = (weightHistory || []).map((e) => ({
+    date: (e.date || "").slice(5),
+    berat: e.weight || 0,
   }));
 
   const gained = weightHistory.length >= 2
@@ -108,8 +123,32 @@ export default function ProgressView({
             onChange={(e) => setNewWeight(e.target.value)}
             className="w-full rounded-lg bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
           />
-          <button onClick={handleAdd} className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground">
-            Simpan
+
+          <div className="space-y-2">
+            <p className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Foto Badan (Opsional)</p>
+            {!newImage ? (
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/20 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Camera className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-xs text-muted-foreground">Upload foto badan</p>
+                </div>
+                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+              </label>
+            ) : (
+              <div className="relative w-full h-32 rounded-lg overflow-hidden group">
+                <img src={newImage} alt="Body progress preview" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => setNewImage(null)}
+                  className="absolute top-2 right-2 p-1 bg-background/80 rounded-full text-foreground hover:bg-background transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button onClick={handleAdd} className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20">
+            Simpan Progress
           </button>
         </div>
       )}
@@ -231,14 +270,23 @@ export default function ProgressView({
       </div>
 
       {/* Weight History */}
-      <div className="glass-card rounded-xl p-4 space-y-2">
+      <div className="glass-card rounded-xl p-4 space-y-3">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Riwayat</h3>
-        {[...weightHistory].reverse().map((e, i) => (
-          <div key={i} className="flex items-center justify-between rounded-lg bg-secondary/50 px-3 py-2">
-            <span className="text-sm text-muted-foreground">{e.date}</span>
-            <span className="text-sm font-semibold">{e.weight} kg</span>
-          </div>
-        ))}
+        <div className="space-y-2">
+          {(weightHistory || []).slice().reverse().map((e, i) => (
+            <div key={i} className="flex flex-col gap-2 rounded-lg bg-secondary/30 p-3 border border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">{e.date}</span>
+                <span className="text-sm font-bold text-primary">{e.weight} kg</span>
+              </div>
+              {e.image && (
+                <div className="mt-1 w-full h-40 rounded-lg overflow-hidden border border-border/50">
+                  <img src={e.image} alt={`Progress ${e.date}`} className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

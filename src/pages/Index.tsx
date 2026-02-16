@@ -3,11 +3,21 @@ import BottomNav from "@/components/BottomNav";
 import DashboardView from "@/components/DashboardView";
 import MealsView from "@/components/MealsView";
 import ProgressView from "@/components/ProgressView";
+import GalleryView from "@/components/GalleryView";
 import { useBulkingStore } from "@/hooks/useBulkingStore";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const store = useBulkingStore();
+
+  if (store.loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 pb-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary border-r-transparent"></div>
+        <p className="mt-4 text-sm font-medium text-muted-foreground animate-pulse">Menghubungkan ke database...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -22,6 +32,8 @@ const Index = () => {
             weightProgress={store.weightProgress}
             daysElapsed={store.daysElapsed}
             currentWeight={store.currentWeight}
+            meals={store.meals}
+            toggleMealCompletion={store.toggleMealCompletion}
           />
         )}
         {activeTab === "meals" && (
@@ -42,6 +54,9 @@ const Index = () => {
             weightProgress={store.weightProgress}
             setGoals={store.setGoals}
           />
+        )}
+        {activeTab === "gallery" && (
+          <GalleryView weightHistory={store.weightHistory} />
         )}
       </div>
       <BottomNav active={activeTab} onChange={setActiveTab} />

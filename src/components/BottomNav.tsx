@@ -1,4 +1,4 @@
-import { Home, Utensils, TrendingUp } from "lucide-react";
+import { Home, Utensils, TrendingUp, Camera } from "lucide-react";
 
 interface BottomNavProps {
   active: string;
@@ -9,6 +9,7 @@ const tabs = [
   { id: "dashboard", icon: Home, label: "Beranda" },
   { id: "meals", icon: Utensils, label: "Makanan" },
   { id: "progress", icon: TrendingUp, label: "Progress" },
+  { id: "gallery", icon: Camera, label: "Galeri" },
 ];
 
 export default function BottomNav({ active, onChange }: BottomNavProps) {
@@ -21,11 +22,10 @@ export default function BottomNav({ active, onChange }: BottomNavProps) {
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? "text-primary glow-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-all duration-200 ${isActive
+                ? "text-primary glow-primary"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <tab.icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
               <span className="text-[10px] font-semibold">{tab.label}</span>
