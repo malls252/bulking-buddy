@@ -83,12 +83,16 @@ export function useBulkingStore() {
     const fetchData = async () => {
       if (!isSupabaseConfigured) {
         // Fallback to localStorage if Supabase is not configured
-        const savedMeals = localStorage.getItem(STORAGE_KEYS.MEALS);
-        const savedGoals = localStorage.getItem(STORAGE_KEYS.GOALS);
-        const savedWeight = localStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
-        if (savedMeals) setMeals(JSON.parse(savedMeals));
-        if (savedGoals) setGoals(JSON.parse(savedGoals));
-        if (savedWeight) setWeightHistory(JSON.parse(savedWeight));
+        try {
+          const savedMeals = localStorage.getItem(STORAGE_KEYS.MEALS);
+          const savedGoals = localStorage.getItem(STORAGE_KEYS.GOALS);
+          const savedWeight = localStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
+          if (savedMeals) setMeals(JSON.parse(savedMeals));
+          if (savedGoals) setGoals(JSON.parse(savedGoals));
+          if (savedWeight) setWeightHistory(JSON.parse(savedWeight));
+        } catch (e) {
+          console.error("Failed to parse localStorage data:", e);
+        }
         setLoading(false);
         return;
       }
@@ -360,7 +364,12 @@ export function useBulkingStore() {
     return Math.min(100, Math.max(0, ((currentWeight - start) / (target - start)) * 100));
   }, [currentWeight, goals.currentWeight, goals.targetWeight]);
 
-  const daysElapsed = Math.floor((new Date().getTime() - new Date(goals.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const daysElapsed = useMemo(() => {
+    if (!goals?.startDate) return 1;
+    const start = new Date(goals.startDate);
+    if (isNaN(start.getTime())) return 1;
+    return Math.floor((new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  }, [goals?.startDate]);
 
   return {
     meals,
