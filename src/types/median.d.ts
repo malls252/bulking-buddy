@@ -6,8 +6,14 @@ export interface MedianOneSignal {
     logout: () => void;
 }
 
+export interface MedianScheduling {
+    create: (data: { title: string; body: string; date: string }) => void;
+    cancelAll: () => void;
+}
+
 export interface Median {
     onesignal: MedianOneSignal;
+    scheduling: MedianScheduling;
     isRegistered?: boolean;
 }
 

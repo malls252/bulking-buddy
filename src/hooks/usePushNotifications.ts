@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
+import { Meal } from "@/types/bulking";
+
 export const usePushNotifications = () => {
     const [isMedian, setIsMedian] = useState(false);
     const [oneSignalId, setOneSignalId] = useState<string | null>(null);
@@ -46,10 +48,46 @@ export const usePushNotifications = () => {
         }
     }, []);
 
+    const syncMealReminders = useCallback((meals: Meal[]) => {
+        if (!window.median || !window.median.scheduling) {
+            console.log("Median Scheduling not available");
+            return;
+        }
+
+        try {
+            // 1. Clear existing alarms to avoid duplicates
+            window.median.scheduling.cancelAll();
+
+            // 2. Schedule each meal
+            meals.forEach(meal => {
+                const [hours, minutes] = meal.time.split(":").map(Number);
+                const now = new Date();
+                const scheduledDate = new Date();
+                scheduledDate.setHours(hours, minutes, 0, 0);
+
+                // If the time has already passed today, schedule for tomorrow
+                if (scheduledDate.getTime() <= now.getTime()) {
+                    scheduledDate.setDate(scheduledDate.getDate() + 1);
+                }
+
+                window.median!.scheduling.create({
+                    title: `Waktunya ${meal.name}! 🍽️`,
+                    body: `Ayo makan tepat waktu untuk hasil bulking maksimal.`,
+                    date: scheduledDate.toISOString(),
+                });
+            });
+
+            console.log(`Successfully synced ${meals.length} meal reminders.`);
+        } catch (error) {
+            console.error("Failed to sync meal reminders:", error);
+        }
+    }, []);
+
     return {
         isMedian,
         oneSignalId,
         isSubscribed,
         registerDevice,
+        syncMealReminders,
     };
 };

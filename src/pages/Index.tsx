@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import DashboardView from "@/components/DashboardView";
 import MealsView from "@/components/MealsView";
@@ -11,6 +11,13 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const store = useBulkingStore();
   const push = usePushNotifications();
+
+  // Sync meal reminders whenever schedule changes
+  useEffect(() => {
+    if (store.meals.length > 0) {
+      push.syncMealReminders(store.meals);
+    }
+  }, [store.meals, push.syncMealReminders]);
 
   if (store.loading) {
     return (
