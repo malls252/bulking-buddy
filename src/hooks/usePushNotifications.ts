@@ -8,12 +8,12 @@ export const usePushNotifications = () => {
 
     useEffect(() => {
         // Check if running in Median
-        if (window.median) {
+        if (window.median && window.median.onesignal) {
             setIsMedian(true);
 
             // Get initial info
             window.median.onesignal.getInfo((data) => {
-                if (data.oneSignalUserId) {
+                if (data && data.oneSignalUserId) {
                     setOneSignalId(data.oneSignalUserId);
                     setIsSubscribed(data.isSubscribed);
                 }

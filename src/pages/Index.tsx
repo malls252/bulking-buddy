@@ -10,7 +10,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const store = useBulkingStore();
-  const push = usePushNotifications();
+  // const push = usePushNotifications();
 
   if (store.loading) {
     return (
@@ -36,8 +36,10 @@ const Index = () => {
             currentWeight={store.currentWeight}
             meals={store.meals}
             toggleMealCompletion={store.toggleMealCompletion}
-            registerPush={push.registerDevice}
-            isPushSubscribed={push.isSubscribed}
+            // registerPush={push.registerDevice}
+            // isPushSubscribed={push.isSubscribed}
+            registerPush={() => { }}
+            isPushSubscribed={false}
           />
         )}
         {activeTab === "meals" && (
