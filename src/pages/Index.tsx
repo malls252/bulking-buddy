@@ -46,6 +46,9 @@ const Index = () => {
             registerPush={push.registerDevice}
             isPushSubscribed={push.isSubscribed}
             isRegistering={push.isRegistering}
+            testAlarm={push.testAlarm}
+            isMedian={push.isMedian}
+            isWebSupported={push.isWebNotificationSupported}
           />
         )}
         {activeTab === "meals" && (

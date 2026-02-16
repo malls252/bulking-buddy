@@ -17,6 +17,9 @@ interface DashboardViewProps {
   registerPush: () => void;
   isPushSubscribed: boolean;
   isRegistering: boolean;
+  testAlarm: () => void;
+  isMedian: boolean;
+  isWebSupported: boolean;
 }
 
 export default function DashboardView({
@@ -33,6 +36,9 @@ export default function DashboardView({
   registerPush,
   isPushSubscribed,
   isRegistering,
+  testAlarm,
+  isMedian,
+  isWebSupported,
 }: DashboardViewProps) {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -48,8 +54,8 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Push Notification Card - Only visible in Median App */}
-      {((window as any).median) && (
+      {/* Push Notification Card - Visible in Median or supported Browsers */}
+      {(isMedian || isWebSupported) && (
         <div className={`glass-card rounded-2xl p-4 flex items-center justify-between border ${isPushSubscribed ? 'border-primary/20 bg-primary/5' : 'border-dashed border-muted-foreground/30'}`}>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl ${isPushSubscribed ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}`}>
@@ -67,6 +73,15 @@ export default function DashboardView({
           >
             {isPushSubscribed ? 'Aktif' : (isRegistering ? 'Proses...' : 'Izinkan')}
           </button>
+
+          {isPushSubscribed && (
+            <button
+              onClick={testAlarm}
+              className="ml-2 p-1.5 rounded-lg text-[10px] font-bold bg-secondary text-foreground hover:bg-secondary/80 transition-all"
+            >
+              Tes Aler
+            </button>
+          )}
         </div>
       )}
 

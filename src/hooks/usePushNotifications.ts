@@ -5,11 +5,13 @@ import { Meal } from "@/types/bulking";
 
 export const usePushNotifications = () => {
     const [isMedian, setIsMedian] = useState(false);
+    const [isWebNotificationSupported, setIsWebNotificationSupported] = useState(false);
     const [oneSignalId, setOneSignalId] = useState<string | null>(null);
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [isRegistering, setIsRegistering] = useState(false);
 
     const checkInfo = useCallback(() => {
+        // Check for Median
         if (window.median && window.median.onesignal) {
             window.median.onesignal.getInfo((data) => {
                 if (data && data.oneSignalUserId) {
@@ -18,6 +20,13 @@ export const usePushNotifications = () => {
                     if (data.isSubscribed) setIsRegistering(false);
                 }
             });
+        }
+        // Check for Web Notifications
+        else if ('Notification' in window) {
+            setIsWebNotificationSupported(true);
+            if (Notification.permission === 'granted') {
+                setIsSubscribed(true);
+            }
         }
     }, []);
 
@@ -30,87 +39,146 @@ export const usePushNotifications = () => {
     }, [checkInfo]);
 
     const registerDevice = useCallback(() => {
-        if (!window.median) {
-            toast.error("Fitur ini hanya tersedia di aplikasi mobile.");
+        // Median Native Registration
+        if (window.median) {
+            try {
+                setIsRegistering(true);
+
+                if (window.median.localNotifications?.requestPermission) {
+                    window.median.localNotifications.requestPermission();
+                }
+
+                window.median.onesignal.register();
+                toast.success("Mencoba mendaftarkan perangkat native...");
+
+                let attempts = 0;
+                const interval = setInterval(() => {
+                    checkInfo();
+                    attempts++;
+                    if (attempts > 20) {
+                        clearInterval(interval);
+                        setIsRegistering(false);
+                        toast.error("Pendaftaran native lama. Cek koneksi.");
+                    }
+                }, 2000);
+            } catch (error) {
+                console.error("Median Registration Error:", error);
+                toast.error("Gagal mendaftarkan notifikasi native.");
+                setIsRegistering(false);
+            }
             return;
         }
 
-        try {
+        // Web PWA Notification Registration
+        if ('Notification' in window) {
             setIsRegistering(true);
-            window.median.onesignal.register();
-            toast.success("Mencoba mendaftarkan perangkat...");
-
-            // Poll for info several times - increased to 20 attempts (40 seconds)
-            let attempts = 0;
-            const interval = setInterval(() => {
-                checkInfo();
-                attempts++;
-                if (attempts > 20) {
-                    clearInterval(interval);
-                    setIsRegistering(false);
-                    toast.error("Pendaftaran memakan waktu lama. Silakan cek koneksi atau restart aplikasi.");
+            Notification.requestPermission().then(permission => {
+                setIsRegistering(false);
+                if (permission === 'granted') {
+                    setIsSubscribed(true);
+                    toast.success("Notifikasi browser diizinkan!");
+                } else {
+                    toast.error("Izin notifikasi ditolak oleh browser.");
                 }
-            }, 2000);
-        } catch (error) {
-            console.error("Median Registration Error:", error);
-            toast.error("Gagal mendaftarkan notifikasi.");
-            setIsRegistering(false);
+            });
+        } else {
+            toast.error("Browser Anda tidak mendukung notifikasi.");
         }
     }, [checkInfo]);
 
     const syncMealReminders = useCallback((meals: Meal[]) => {
-        if (!window.median || !window.median.localNotifications) {
-            console.log("Median Local Notifications not available");
+        // Native Logic (Median)
+        if (window.median && window.median.localNotifications) {
+            try {
+                console.log("Syncing meal reminders for native bridge...");
+                window.median.localNotifications.cancelAll();
+                meals.forEach(meal => {
+                    const [hours, minutes] = meal.time.split(":").map(Number);
+                    for (let i = 0; i < 7; i++) {
+                        const scheduledDate = new Date();
+                        scheduledDate.setDate(scheduledDate.getDate() + i);
+                        scheduledDate.setHours(hours, minutes, 0, 0);
+                        if (i === 0 && scheduledDate.getTime() <= Date.now()) continue;
+
+                        const year = scheduledDate.getFullYear();
+                        const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(scheduledDate.getDate()).padStart(2, '0');
+                        const hh = String(scheduledDate.getHours()).padStart(2, '0');
+                        const mm = String(scheduledDate.getMinutes()).padStart(2, '0');
+                        const ss = '00';
+                        const localFormat = `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
+
+                        window.median!.localNotifications.create({
+                            title: `Waktunya ${meal.name}! 🍽️`,
+                            message: `Ayo makan tepat waktu (Jam HP: ${meal.time}). Semangat bulking!`,
+                            at: localFormat,
+                        });
+                    }
+                });
+                toast.success("Jadwal makan sinkron ke HP!");
+            } catch (error) {
+                console.error("Native sync error:", error);
+                toast.error("Gagal sinkronisasi native.");
+            }
             return;
         }
 
-        try {
-            // 1. Clear existing alarms to avoid duplicates
-            window.median.localNotifications.cancelAll();
+        // PWA/Web Fallback
+        if ('Notification' in window && Notification.permission === 'granted') {
+            toast.info("Jadwal tersimpan. (Notifikasi browser butuh tab tetap terbuka)");
+        }
+    }, []);
 
-            // 2. Schedule each meal for the next 7 days to ensure daily recurrence
-            meals.forEach(meal => {
-                const [hours, minutes] = meal.time.split(":").map(Number);
-
-                for (let i = 0; i < 7; i++) {
-                    const scheduledDate = new Date();
-                    scheduledDate.setDate(scheduledDate.getDate() + i);
-                    scheduledDate.setHours(hours, minutes, 0, 0);
-
-                    // If it's today and the time has already passed, skip to next day
-                    if (i === 0 && scheduledDate.getTime() <= Date.now()) {
-                        continue;
-                    }
-
-                    // Format as Local ISO (YYYY-MM-DDTHH:mm:SS) without 'Z'
-                    const year = scheduledDate.getFullYear();
-                    const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
-                    const day = String(scheduledDate.getDate()).padStart(2, '0');
-                    const hh = String(scheduledDate.getHours()).padStart(2, '0');
-                    const mm = String(scheduledDate.getMinutes()).padStart(2, '0');
-                    const ss = '00';
-                    const localISO = `${year}-${month}-${day}T${hh}:${mm}:${ss}`;
-
-                    window.median!.localNotifications.create({
-                        title: `Waktunya ${meal.name}! 🍽️`,
-                        message: `Ayo makan tepat waktu (Jam HP: ${meal.time}). Semangat bulking!`,
-                        at: localISO,
+    const testAlarm = useCallback(() => {
+        // Local/Web Notification Test
+        if (!window.median && 'Notification' in window) {
+            if (Notification.permission === 'granted') {
+                setTimeout(() => {
+                    new Notification("Tes Bulking Buddy! 🚀", {
+                        body: "Ini adalah notifikasi tes browser. Berhasil!",
+                        icon: "/pwa-192x192.png"
                     });
-                }
-            });
+                }, 5000);
+                toast.success("Tes notifikasi browser dikirim (5 detik)...");
+            } else {
+                toast.error("Izinkan notifikasi browser terlebih dahulu.");
+            }
+            return;
+        }
 
-            console.log(`Successfully synced ${meals.length} meals for 7 days using device local time: ${new Date().toString()}`);
-        } catch (error) {
-            console.error("Failed to sync meal reminders:", error);
+        // Native Test (Median)
+        if (window.median && window.median.localNotifications) {
+            const testDate = new Date(Date.now() + 10000);
+            const year = testDate.getFullYear();
+            const month = String(testDate.getMonth() + 1).padStart(2, '0');
+            const day = String(testDate.getDate()).padStart(2, '0');
+            const hh = String(testDate.getHours()).padStart(2, '0');
+            const mm = String(testDate.getMinutes()).padStart(2, '0');
+            const ss = String(testDate.getSeconds()).padStart(2, '0');
+            const localFormat = `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
+
+            try {
+                window.median.localNotifications.create({
+                    title: "Tes Bulking Native! 🚀",
+                    message: "Jika Anda melihat ini, alarm native berfungsi!",
+                    at: localFormat,
+                });
+                toast.success(`Tes alarm native dikirim (10 detik)...`);
+            } catch (err) {
+                console.error("Test notification error:", err);
+                toast.error("Gagal tes alarm native.");
+            }
         }
     }, []);
 
     return {
         isMedian,
+        isWebNotificationSupported,
         oneSignalId,
         isSubscribed,
         isRegistering,
         registerDevice,
         syncMealReminders,
+        testAlarm,
     };
 };
