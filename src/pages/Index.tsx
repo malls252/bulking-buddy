@@ -45,6 +45,7 @@ const Index = () => {
             toggleMealCompletion={store.toggleMealCompletion}
             registerPush={push.registerDevice}
             isPushSubscribed={push.isSubscribed}
+            isRegistering={push.isRegistering}
           />
         )}
         {activeTab === "meals" && (

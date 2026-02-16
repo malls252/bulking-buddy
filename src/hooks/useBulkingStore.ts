@@ -194,9 +194,11 @@ export function useBulkingStore() {
     }
   };
 
-  const syncMeal = async (meal: Meal) => {
-    localStorage.setItem(STORAGE_KEYS.MEALS, JSON.stringify(meals.map(m => m.id === meal.id ? meal : m)));
+  const persistMeals = (updatedMeals: Meal[]) => {
+    localStorage.setItem(STORAGE_KEYS.MEALS, JSON.stringify(updatedMeals));
+  };
 
+  const syncMealToSupabase = async (meal: Meal) => {
     if (isSupabaseConfigured) {
       // Upsert meal
       await supabase.from("meals").upsert({
@@ -230,8 +232,10 @@ export function useBulkingStore() {
       const meal = prev.find(m => m.id === mealId);
       if (!meal) return prev;
       const updatedMeal = { ...meal, foods: [...meal.foods, food] };
-      syncMeal(updatedMeal);
-      return prev.map(m => (m.id === mealId ? updatedMeal : m));
+      const updatedMeals = prev.map(m => (m.id === mealId ? updatedMeal : m));
+      persistMeals(updatedMeals);
+      syncMealToSupabase(updatedMeal);
+      return updatedMeals;
     });
   }, [isSupabaseConfigured]);
 
@@ -240,21 +244,31 @@ export function useBulkingStore() {
       const meal = prev.find(m => m.id === mealId);
       if (!meal) return prev;
       const updatedMeal = { ...meal, foods: meal.foods.filter(f => f.id !== foodId) };
-      syncMeal(updatedMeal);
-      return prev.map(m => (m.id === mealId ? updatedMeal : m));
+      const updatedMeals = prev.map(m => (m.id === mealId ? updatedMeal : m));
+      persistMeals(updatedMeals);
+      syncMealToSupabase(updatedMeal);
+      return updatedMeals;
     });
   }, [isSupabaseConfigured]);
 
   const addMeal = useCallback(async (meal: Meal) => {
-    setMeals(prev => [...prev, meal]);
-    await syncMeal(meal);
+    setMeals(prev => {
+      const updated = [...prev, meal];
+      persistMeals(updated);
+      syncMealToSupabase(meal);
+      return updated;
+    });
   }, [isSupabaseConfigured]);
 
   const removeMeal = useCallback(async (mealId: string) => {
-    setMeals(prev => prev.filter(m => m.id !== mealId));
-    if (isSupabaseConfigured) {
-      await supabase.from("meals").delete().eq("id", mealId);
-    }
+    setMeals(prev => {
+      const updated = prev.filter(m => m.id !== mealId);
+      persistMeals(updated);
+      if (isSupabaseConfigured) {
+        supabase.from("meals").delete().eq("id", mealId).then();
+      }
+      return updated;
+    });
   }, [isSupabaseConfigured]);
 
   const toggleMealCompletion = useCallback(async (mealId: string) => {
@@ -263,10 +277,12 @@ export function useBulkingStore() {
       if (!meal) return prev;
       const completed = !meal.completed;
       const updatedMeal = { ...meal, completed };
+      const updatedMeals = prev.map(m => (m.id === mealId ? updatedMeal : m));
+      persistMeals(updatedMeals);
       if (isSupabaseConfigured) {
         supabase.from("meals").update({ completed }).eq("id", mealId).then();
       }
-      return prev.map(m => (m.id === mealId ? updatedMeal : m));
+      return updatedMeals;
     });
   }, [isSupabaseConfigured]);
 

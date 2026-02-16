@@ -16,6 +16,7 @@ interface DashboardViewProps {
   toggleMealCompletion: (id: string) => void;
   registerPush: () => void;
   isPushSubscribed: boolean;
+  isRegistering: boolean;
 }
 
 export default function DashboardView({
@@ -31,6 +32,7 @@ export default function DashboardView({
   toggleMealCompletion,
   registerPush,
   isPushSubscribed,
+  isRegistering,
 }: DashboardViewProps) {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -60,10 +62,10 @@ export default function DashboardView({
           </div>
           <button
             onClick={registerPush}
-            disabled={isPushSubscribed}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isPushSubscribed ? 'bg-secondary text-muted-foreground cursor-default' : 'bg-primary text-primary-foreground hover:scale-105 active:scale-95'}`}
+            disabled={isPushSubscribed || isRegistering}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isPushSubscribed ? 'bg-secondary text-muted-foreground cursor-default' : 'bg-primary text-primary-foreground hover:scale-105 active:scale-95'} ${(isRegistering && !isPushSubscribed) ? 'opacity-70 cursor-wait' : ''}`}
           >
-            {isPushSubscribed ? 'Aktif' : 'Izinkan'}
+            {isPushSubscribed ? 'Aktif' : (isRegistering ? 'Proses...' : 'Izinkan')}
           </button>
         </div>
       )}
