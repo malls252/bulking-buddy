@@ -1,5 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type { Meal, FoodItem, WeightEntry, UserGoals } from "@/types/bulking";
+import { supabase } from "@/lib/supabase";
+import { compressImage, base64ToFile } from "@/lib/imageCompression";
+import { toast } from "sonner";
 
 const STORAGE_KEYS = {
   MEALS: "bulking-meals",
@@ -73,120 +76,265 @@ export function useBulkingStore() {
   const [weightHistory, setWeightHistory] = useState<WeightEntry[]>(defaultWeightHistory);
   const [loading, setLoading] = useState(true);
 
-  // Fetch initial data from API
+  const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  // Fetch initial data from Supabase
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [mealsRes, goalsRes, weightRes] = await Promise.all([
-          fetch("/api/meals"),
-          fetch("/api/goals"),
-          fetch("/api/weight"),
-        ]);
-
-        const mealsData = await mealsRes.json();
-        const goalsData = await goalsRes.json();
-        const weightData = await weightRes.json();
-
-        if (mealsData && mealsData.length > 0) setMeals(mealsData);
-        if (goalsData) setGoals(goalsData);
-        if (weightData) {
-          // Compatibility: ensure IDs exist
-          setWeightHistory(weightData.map((e: any, i: number) => ({
-            ...e,
-            id: e.id || `${e.date}-${i}`,
-            weight: Number(e.weight) // Ensure weight is numeric
-          })));
-        }
-      } catch (error) {
-        console.error("Failed to fetch data from Vercel:", error);
-        // Fallback to localStorage if API fails (optional, but good for local dev)
+      if (!isSupabaseConfigured) {
+        // Fallback to localStorage if Supabase is not configured
         const savedMeals = localStorage.getItem(STORAGE_KEYS.MEALS);
         const savedGoals = localStorage.getItem(STORAGE_KEYS.GOALS);
         const savedWeight = localStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
         if (savedMeals) setMeals(JSON.parse(savedMeals));
         if (savedGoals) setGoals(JSON.parse(savedGoals));
         if (savedWeight) setWeightHistory(JSON.parse(savedWeight));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const [mealsRes, goalsRes, weightRes, foodsRes] = await Promise.all([
+          supabase.from("meals").select("*"),
+          supabase.from("goals").select("*").limit(1).maybeSingle(),
+          supabase.from("weight_history").select("*").order("date", { ascending: true }),
+          supabase.from("food_items").select("*"),
+        ]);
+
+        if (mealsRes.data) {
+          const fullMeals = mealsRes.data.map(meal => ({
+            ...meal,
+            foods: (foodsRes.data || []).filter(f => f.meal_id === meal.id)
+          }));
+          if (fullMeals.length > 0) setMeals(fullMeals);
+        }
+
+        if (goalsRes.data) {
+          setGoals({
+            targetWeight: Number(goalsRes.data.target_weight),
+            currentWeight: Number(goalsRes.data.current_weight),
+            dailyCalories: goalsRes.data.daily_calories,
+            dailyProtein: goalsRes.data.daily_protein,
+            startDate: goalsRes.data.start_date,
+          });
+        }
+
+        if (weightRes.data) {
+          setWeightHistory(weightRes.data.map((e: any) => ({
+            ...e,
+            weight: Number(e.weight)
+          })));
+        }
+      } catch (error) {
+        console.error("Failed to fetch data from Supabase:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [isSupabaseConfigured]);
+
+  const uploadImage = async (base64: string, id: string): Promise<string | null> => {
+    console.log("Starting image upload for ID:", id);
+    try {
+      const file = await base64ToFile(base64, `photo-${id}.jpg`);
+      console.log("File prepared, compressing...");
+      const compressed = await compressImage(file);
+      console.log("Compression complete. Original size:", (file.size / 1024).toFixed(2), "KB, Compressed size:", (compressed.size / 1024).toFixed(2), "KB");
+
+      const fileName = `progress/${id}-${Date.now()}.jpg`;
+      const { data, error } = await supabase.storage
+        .from("progress-photos")
+        .upload(fileName, compressed, {
+          cacheControl: "3600",
+          upsert: false
+        });
+
+      if (error) {
+        console.error("Supabase Storage Error:", error);
+        toast.error(`Gagal upload foto: ${error.message}`);
+        return null;
+      }
+
+      console.log("Upload successful, fetching public URL...");
+      const { data: { publicUrl } } = supabase.storage
+        .from("progress-photos")
+        .getPublicUrl(fileName);
+
+      console.log("Public URL:", publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error("General Upload Exception:", error);
+      toast.error("Terjadi kesalahan saat mengunggah foto.");
+      return null;
+    }
+  };
 
   // Sync to database and localStorage
   const saveGoals = async (newGoals: UserGoals) => {
     setGoals(newGoals);
     localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(newGoals));
-    await fetch("/api/goals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newGoals),
-    });
+
+    if (isSupabaseConfigured) {
+      await supabase.from("goals").upsert({
+        id: 1, // Single user app
+        target_weight: newGoals.targetWeight,
+        current_weight: newGoals.currentWeight,
+        daily_calories: newGoals.dailyCalories,
+        daily_protein: newGoals.dailyProtein,
+        start_date: newGoals.startDate,
+        updated_at: new Date().toISOString(),
+      });
+    }
   };
 
   const syncMeal = async (meal: Meal) => {
     localStorage.setItem(STORAGE_KEYS.MEALS, JSON.stringify(meals.map(m => m.id === meal.id ? meal : m)));
-    await fetch("/api/meals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(meal),
-    });
+
+    if (isSupabaseConfigured) {
+      // Upsert meal
+      await supabase.from("meals").upsert({
+        id: meal.id,
+        name: meal.name,
+        time: meal.time,
+        completed: meal.completed,
+      });
+
+      // Cleanup and re-insert foods (transaction-like)
+      await supabase.from("food_items").delete().eq("meal_id", meal.id);
+
+      if (meal.foods.length > 0) {
+        await supabase.from("food_items").insert(
+          meal.foods.map(f => ({
+            id: f.id,
+            meal_id: meal.id,
+            name: f.name,
+            calories: f.calories,
+            protein: f.protein,
+            carbs: f.carbs,
+            fat: f.fat,
+          }))
+        );
+      }
+    }
   };
 
   const addFoodToMeal = useCallback(async (mealId: string, food: FoodItem) => {
-    const meal = meals.find(m => m.id === mealId);
-    if (!meal) return;
-
-    const updatedMeal = { ...meal, foods: [...meal.foods, food] };
-    setMeals(prev => prev.map(m => (m.id === mealId ? updatedMeal : m)));
-    await syncMeal(updatedMeal);
-  }, [meals]);
+    setMeals(prev => {
+      const meal = prev.find(m => m.id === mealId);
+      if (!meal) return prev;
+      const updatedMeal = { ...meal, foods: [...meal.foods, food] };
+      syncMeal(updatedMeal);
+      return prev.map(m => (m.id === mealId ? updatedMeal : m));
+    });
+  }, [isSupabaseConfigured]);
 
   const removeFoodFromMeal = useCallback(async (mealId: string, foodId: string) => {
-    const meal = meals.find(m => m.id === mealId);
-    if (!meal) return;
-
-    const updatedMeal = { ...meal, foods: meal.foods.filter(f => f.id !== foodId) };
-    setMeals(prev => prev.map(m => (m.id === mealId ? updatedMeal : m)));
-    await syncMeal(updatedMeal);
-  }, [meals]);
+    setMeals(prev => {
+      const meal = prev.find(m => m.id === mealId);
+      if (!meal) return prev;
+      const updatedMeal = { ...meal, foods: meal.foods.filter(f => f.id !== foodId) };
+      syncMeal(updatedMeal);
+      return prev.map(m => (m.id === mealId ? updatedMeal : m));
+    });
+  }, [isSupabaseConfigured]);
 
   const addMeal = useCallback(async (meal: Meal) => {
     setMeals(prev => [...prev, meal]);
     await syncMeal(meal);
-  }, [meals]);
+  }, [isSupabaseConfigured]);
 
   const removeMeal = useCallback(async (mealId: string) => {
     setMeals(prev => prev.filter(m => m.id !== mealId));
-    await fetch(`/api/meals?id=${mealId}`, { method: "DELETE" });
-  }, []);
+    if (isSupabaseConfigured) {
+      await supabase.from("meals").delete().eq("id", mealId);
+    }
+  }, [isSupabaseConfigured]);
 
   const toggleMealCompletion = useCallback(async (mealId: string) => {
-    const meal = meals.find(m => m.id === mealId);
-    if (!meal) return;
-
-    const completed = !meal.completed;
-    setMeals(prev => prev.map(m => (m.id === mealId ? { ...m, completed } : m)));
-
-    await fetch("/api/meals", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: mealId, completed }),
+    setMeals(prev => {
+      const meal = prev.find(m => m.id === mealId);
+      if (!meal) return prev;
+      const completed = !meal.completed;
+      const updatedMeal = { ...meal, completed };
+      if (isSupabaseConfigured) {
+        supabase.from("meals").update({ completed }).eq("id", mealId).then();
+      }
+      return prev.map(m => (m.id === mealId ? updatedMeal : m));
     });
-  }, [meals]);
+  }, [isSupabaseConfigured]);
 
   const addWeightEntry = useCallback(async (entry: WeightEntry) => {
-    setWeightHistory(prev => [...prev, entry].sort((a, b) => a.date.localeCompare(b.date)));
-    localStorage.setItem(STORAGE_KEYS.WEIGHT_HISTORY, JSON.stringify([...weightHistory, entry]));
+    let finalImageUrl = entry.image;
 
-    await fetch("/api/weight", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(entry),
+    if (entry.image?.startsWith("data:image")) {
+      toast.info("Mengunggah foto ke cloud...");
+      const uploadedUrl = await uploadImage(entry.image, entry.id);
+      if (uploadedUrl) {
+        finalImageUrl = uploadedUrl;
+        toast.success("Foto berhasil diunggah!");
+      } else {
+        console.warn("Upload failed, falling back to local storage for the image content.");
+        toast.warning("Gagal mengunggah foto ke cloud, menyimpan secara lokal.");
+      }
+    }
+
+    const entryWithStoredImage = { ...entry, image: finalImageUrl };
+
+    setWeightHistory(prev => {
+      const updated = [...prev, entryWithStoredImage].sort((a, b) => a.date.localeCompare(b.date));
+      localStorage.setItem(STORAGE_KEYS.WEIGHT_HISTORY, JSON.stringify(updated));
+
+      if (isSupabaseConfigured) {
+        supabase.from("weight_history").upsert({
+          id: entryWithStoredImage.id,
+          date: entryWithStoredImage.date,
+          weight: entryWithStoredImage.weight,
+          image: entryWithStoredImage.image,
+        }).then(({ error }) => {
+          if (error) {
+            console.error("Database Upsert Error:", error);
+            toast.error("Gagal sinkronisasi data berat ke database.");
+          }
+        });
+      }
+      return updated;
     });
-  }, [weightHistory]);
+  }, [isSupabaseConfigured]);
+
+  const removeWeightEntry = useCallback(async (entryId: string) => {
+    const entry = weightHistory.find(e => e.id === entryId);
+    if (!entry) return;
+
+    // Delete photo from storage if it's a Supabase URL
+    if (entry.image?.includes(".supabase.co/storage/v1/object/public/progress-photos/")) {
+      try {
+        const path = entry.image.split("/progress-photos/")[1];
+        await supabase.storage.from("progress-photos").remove([path]);
+      } catch (error) {
+        console.error("Failed to delete photo from storage:", error);
+      }
+    }
+
+    setWeightHistory(prev => {
+      const updated = prev.filter(e => e.id !== entryId);
+      localStorage.setItem(STORAGE_KEYS.WEIGHT_HISTORY, JSON.stringify(updated));
+
+      if (isSupabaseConfigured) {
+        supabase.from("weight_history").delete().eq("id", entryId).then(({ error }) => {
+          if (error) {
+            console.error("Database Delete Error:", error);
+            toast.error("Gagal menghapus data dari database.");
+          } else {
+            toast.success("Data berat badan berhasil dihapus.");
+          }
+        });
+      }
+      return updated;
+    });
+  }, [weightHistory, isSupabaseConfigured]);
 
   // Derive totals only from completed meals
   const completedMeals = meals.filter(m => m.completed);
@@ -195,12 +343,22 @@ export function useBulkingStore() {
   const totalCarbs = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.carbs, 0), 0);
   const totalFat = completedMeals.reduce((sum, m) => sum + m.foods.reduce((s, f) => s + f.fat, 0), 0);
 
-  const initialWeight = weightHistory[0]?.weight || goals.currentWeight;
-  const currentWeight = weightHistory[weightHistory.length - 1]?.weight || goals.currentWeight;
+  const currentWeight = useMemo(() =>
+    weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : 0
+    , [weightHistory]);
 
-  const weightProgress = goals.targetWeight > initialWeight
-    ? Math.min(100, Math.max(0, ((currentWeight - initialWeight) / (goals.targetWeight - initialWeight)) * 100))
-    : 0;
+  const totalGain = useMemo(() => {
+    if (currentWeight === 0) return 0;
+    return Math.max(0, currentWeight - goals.currentWeight);
+  }, [currentWeight, goals.currentWeight]);
+
+  const weightProgress = useMemo(() => {
+    if (currentWeight === 0) return 0;
+    const start = goals.currentWeight;
+    const target = goals.targetWeight;
+    if (target <= start) return 0;
+    return Math.min(100, Math.max(0, ((currentWeight - start) / (target - start)) * 100));
+  }, [currentWeight, goals.currentWeight, goals.targetWeight]);
 
   const daysElapsed = Math.floor((new Date().getTime() - new Date(goals.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -220,7 +378,9 @@ export function useBulkingStore() {
     removeMeal,
     toggleMealCompletion,
     addWeightEntry,
+    removeWeightEntry,
     weightProgress,
+    totalGain,
     daysElapsed,
     loading,
   };

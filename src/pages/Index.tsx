@@ -5,10 +5,12 @@ import MealsView from "@/components/MealsView";
 import ProgressView from "@/components/ProgressView";
 import GalleryView from "@/components/GalleryView";
 import { useBulkingStore } from "@/hooks/useBulkingStore";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const store = useBulkingStore();
+  const push = usePushNotifications();
 
   if (store.loading) {
     return (
@@ -34,6 +36,8 @@ const Index = () => {
             currentWeight={store.currentWeight}
             meals={store.meals}
             toggleMealCompletion={store.toggleMealCompletion}
+            registerPush={push.registerDevice}
+            isPushSubscribed={push.isSubscribed}
           />
         )}
         {activeTab === "meals" && (
@@ -51,7 +55,10 @@ const Index = () => {
             weightHistory={store.weightHistory}
             goals={store.goals}
             addWeightEntry={store.addWeightEntry}
+            removeWeightEntry={store.removeWeightEntry}
             weightProgress={store.weightProgress}
+            currentWeight={store.currentWeight}
+            totalGain={store.totalGain}
             setGoals={store.setGoals}
           />
         )}

@@ -1,6 +1,6 @@
 import CalorieRing from "./CalorieRing";
 import MacroBar from "./MacroBar";
-import { Flame, Dumbbell, Target, Clock, CheckCircle2, Circle } from "lucide-react";
+import { Flame, Dumbbell, Target, Clock, CheckCircle2, Circle, Bell, BellRing } from "lucide-react";
 import type { UserGoals, Meal } from "@/types/bulking";
 
 interface DashboardViewProps {
@@ -14,6 +14,8 @@ interface DashboardViewProps {
   currentWeight: number;
   meals: Meal[];
   toggleMealCompletion: (id: string) => void;
+  registerPush: () => void;
+  isPushSubscribed: boolean;
 }
 
 export default function DashboardView({
@@ -27,6 +29,8 @@ export default function DashboardView({
   currentWeight,
   meals,
   toggleMealCompletion,
+  registerPush,
+  isPushSubscribed,
 }: DashboardViewProps) {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -41,6 +45,28 @@ export default function DashboardView({
           </span>
         </div>
       </div>
+
+      {/* Push Notification Card - Only visible in Median App */}
+      {((window as any).median) && (
+        <div className={`glass-card rounded-2xl p-4 flex items-center justify-between border ${isPushSubscribed ? 'border-primary/20 bg-primary/5' : 'border-dashed border-muted-foreground/30'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${isPushSubscribed ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}`}>
+              {isPushSubscribed ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+            </div>
+            <div>
+              <p className="text-sm font-bold">{isPushSubscribed ? 'Notifikasi Aktif' : 'Aktifkan Notifikasi'}</p>
+              <p className="text-[10px] text-muted-foreground">Dapatkan pengingat makan & timbang badan</p>
+            </div>
+          </div>
+          <button
+            onClick={registerPush}
+            disabled={isPushSubscribed}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isPushSubscribed ? 'bg-secondary text-muted-foreground cursor-default' : 'bg-primary text-primary-foreground hover:scale-105 active:scale-95'}`}
+          >
+            {isPushSubscribed ? 'Aktif' : 'Izinkan'}
+          </button>
+        </div>
+      )}
 
       {/* Calorie Ring */}
       <div className="glass-card rounded-2xl p-6 flex flex-col items-center gap-4 glow-primary">

@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
-import { Plus, Scale, TrendingUp, Target, Edit2, Camera, X } from "lucide-react";
+import { Plus, Scale, TrendingUp, Target, Edit2, Camera, X, Trash2 } from "lucide-react";
 import type { WeightEntry, UserGoals } from "@/types/bulking";
 
 interface ProgressViewProps {
   weightHistory: WeightEntry[];
   goals: UserGoals;
   addWeightEntry: (entry: WeightEntry) => void;
+  removeWeightEntry: (entryId: string) => void;
   weightProgress: number;
+  currentWeight: number;
+  totalGain: number;
   setGoals: (goals: UserGoals) => void;
 }
 
@@ -15,7 +18,10 @@ export default function ProgressView({
   weightHistory,
   goals,
   addWeightEntry,
+  removeWeightEntry,
   weightProgress,
+  currentWeight,
+  totalGain,
   setGoals
 }: ProgressViewProps) {
   const [showAdd, setShowAdd] = useState(false);
@@ -37,6 +43,7 @@ export default function ProgressView({
   // Temp states for editing goals
   const [tempGoals, setTempGoals] = useState({
     targetWeight: goals.targetWeight.toString(),
+    currentWeight: goals.currentWeight.toString(),
     dailyCalories: goals.dailyCalories.toString(),
     dailyProtein: goals.dailyProtein.toString(),
   });
@@ -55,14 +62,16 @@ export default function ProgressView({
   };
 
   const handleUpdateGoals = () => {
-    const weight = parseFloat(tempGoals.targetWeight);
+    const targetWeight = parseFloat(tempGoals.targetWeight);
+    const startWeight = parseFloat(tempGoals.currentWeight);
     const calories = parseInt(tempGoals.dailyCalories);
     const protein = parseInt(tempGoals.dailyProtein);
 
-    if (!isNaN(weight) && !isNaN(calories) && !isNaN(protein)) {
+    if (!isNaN(targetWeight) && !isNaN(startWeight) && !isNaN(calories) && !isNaN(protein)) {
       setGoals({
         ...goals,
-        targetWeight: weight,
+        targetWeight,
+        currentWeight: startWeight,
         dailyCalories: calories,
         dailyProtein: protein,
       });
@@ -75,9 +84,7 @@ export default function ProgressView({
     berat: e.weight || 0,
   }));
 
-  const gained = weightHistory.length >= 2
-    ? (weightHistory[weightHistory.length - 1].weight - weightHistory[0].weight).toFixed(1)
-    : "0";
+  const gained = totalGain > 0 ? totalGain.toFixed(1) : "0";
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -92,6 +99,7 @@ export default function ProgressView({
               setShowAdd(false);
               setTempGoals({
                 targetWeight: goals.targetWeight.toString(),
+                currentWeight: goals.currentWeight.toString(),
                 dailyCalories: goals.dailyCalories.toString(),
                 dailyProtein: goals.dailyProtein.toString(),
               });
@@ -158,15 +166,27 @@ export default function ProgressView({
           <p className="text-sm font-semibold text-primary">Konfigurasi Target Bulking</p>
 
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Target Berat (kg)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={tempGoals.targetWeight}
-                onChange={(e) => setTempGoals(p => ({ ...p, targetWeight: e.target.value }))}
-                className="w-full rounded-lg bg-secondary px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Berat Standar (kg)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={tempGoals.currentWeight}
+                  onChange={(e) => setTempGoals(p => ({ ...p, currentWeight: e.target.value }))}
+                  className="w-full rounded-lg bg-secondary px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Target Berat (kg)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={tempGoals.targetWeight}
+                  onChange={(e) => setTempGoals(p => ({ ...p, targetWeight: e.target.value }))}
+                  className="w-full rounded-lg bg-secondary px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -205,7 +225,7 @@ export default function ProgressView({
             <span className="text-[10px] font-semibold uppercase tracking-wider">Berat Saat Ini</span>
           </div>
           <p className="text-2xl font-bold">
-            {weightHistory[weightHistory.length - 1]?.weight || goals.currentWeight}
+            {currentWeight}
             <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
           </p>
         </div>
@@ -276,8 +296,17 @@ export default function ProgressView({
           {(weightHistory || []).slice().reverse().map((e, i) => (
             <div key={i} className="flex flex-col gap-2 rounded-lg bg-secondary/30 p-3 border border-border/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">{e.date}</span>
-                <span className="text-sm font-bold text-primary">{e.weight} kg</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-foreground">{e.date}</span>
+                  <span className="text-sm font-bold text-primary">{e.weight} kg</span>
+                </div>
+                <button
+                  onClick={() => removeWeightEntry(e.id)}
+                  className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                  title="Hapus Progress"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
               {e.image && (
                 <div className="mt-1 w-full h-40 rounded-lg overflow-hidden border border-border/50">
