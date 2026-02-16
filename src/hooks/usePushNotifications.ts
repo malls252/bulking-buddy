@@ -40,14 +40,15 @@ export const usePushNotifications = () => {
             window.median.onesignal.register();
             toast.success("Mencoba mendaftarkan perangkat...");
 
-            // Poll for info several times
+            // Poll for info several times - increased to 20 attempts (40 seconds)
             let attempts = 0;
             const interval = setInterval(() => {
                 checkInfo();
                 attempts++;
-                if (attempts > 5) {
+                if (attempts > 20) {
                     clearInterval(interval);
                     setIsRegistering(false);
+                    toast.error("Pendaftaran memakan waktu lama. Silakan cek koneksi atau restart aplikasi.");
                 }
             }, 2000);
         } catch (error) {
@@ -58,14 +59,14 @@ export const usePushNotifications = () => {
     }, [checkInfo]);
 
     const syncMealReminders = useCallback((meals: Meal[]) => {
-        if (!window.median || !window.median.scheduling) {
-            console.log("Median Scheduling not available");
+        if (!window.median || !window.median.localNotifications) {
+            console.log("Median Local Notifications not available");
             return;
         }
 
         try {
             // 1. Clear existing alarms to avoid duplicates
-            window.median.scheduling.cancelAll();
+            window.median.localNotifications.cancelAll();
 
             // 2. Schedule each meal for the next 7 days to ensure daily recurrence
             meals.forEach(meal => {
@@ -81,15 +82,24 @@ export const usePushNotifications = () => {
                         continue;
                     }
 
-                    window.median!.scheduling.create({
+                    // Format as Local ISO (YYYY-MM-DDTHH:mm:SS) without 'Z'
+                    const year = scheduledDate.getFullYear();
+                    const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(scheduledDate.getDate()).padStart(2, '0');
+                    const hh = String(scheduledDate.getHours()).padStart(2, '0');
+                    const mm = String(scheduledDate.getMinutes()).padStart(2, '0');
+                    const ss = '00';
+                    const localISO = `${year}-${month}-${day}T${hh}:${mm}:${ss}`;
+
+                    window.median!.localNotifications.create({
                         title: `Waktunya ${meal.name}! 🍽️`,
-                        body: `Ayo makan tepat waktu (Jam HP: ${meal.time}). Semangat bulking!`,
-                        date: scheduledDate.toISOString(),
+                        message: `Ayo makan tepat waktu (Jam HP: ${meal.time}). Semangat bulking!`,
+                        at: localISO,
                     });
                 }
             });
 
-            console.log(`Successfully synced ${meals.length} meals for the next 7 days using device local time: ${new Date().toString()}`);
+            console.log(`Successfully synced ${meals.length} meals for 7 days using device local time: ${new Date().toString()}`);
         } catch (error) {
             console.error("Failed to sync meal reminders:", error);
         }
