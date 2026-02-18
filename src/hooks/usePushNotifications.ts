@@ -50,15 +50,35 @@ export const usePushNotifications = () => {
             window.median.onesignal.register();
             toast.success("Mencoba mendaftarkan perangkat...");
 
-            // Poll for info several times - increased to 20 attempts (40 seconds)
+            // Poll until subscribed or timeout (max 20 attempts × 2s = 40s)
             let attempts = 0;
             const interval = setInterval(() => {
-                checkInfo();
                 attempts++;
-                if (attempts > 20) {
+
+                if (window.median?.onesignal) {
+                    window.median.onesignal.getInfo((data) => {
+                        console.log(`Poll attempt ${attempts}:`, data);
+                        if (data?.oneSignalUserId && data.isSubscribed) {
+                            // ✅ Berhasil — stop polling segera
+                            clearInterval(interval);
+                            setOneSignalId(data.oneSignalUserId);
+                            setIsSubscribed(true);
+                            setIsRegistering(false);
+                            toast.success("Notifikasi berhasil diaktifkan! 🎉");
+                            console.log("OneSignal Subscribed with ID:", data.oneSignalUserId);
+                            return;
+                        }
+
+                        if (attempts >= 20) {
+                            clearInterval(interval);
+                            setIsRegistering(false);
+                            toast.error("Pendaftaran memakan waktu lama. Silakan cek koneksi atau restart aplikasi.");
+                        }
+                    });
+                } else if (attempts >= 20) {
                     clearInterval(interval);
                     setIsRegistering(false);
-                    toast.error("Pendaftaran memakan waktu lama. Silakan cek koneksi atau restart aplikasi.");
+                    toast.error("Median tidak terdeteksi.");
                 }
             }, 2000);
         } catch (error) {
@@ -66,7 +86,7 @@ export const usePushNotifications = () => {
             toast.error("Gagal mendaftarkan notifikasi.");
             setIsRegistering(false);
         }
-    }, [checkInfo]);
+    }, []);
 
     const syncMealReminders = useCallback((meals: Meal[]) => {
         if (!window.median || !window.median.localNotifications) {
