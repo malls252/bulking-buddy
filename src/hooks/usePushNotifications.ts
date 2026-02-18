@@ -3,6 +3,8 @@ import { toast } from "sonner";
 
 import { Meal } from "@/types/bulking";
 
+const LAST_SCHEDULED_KEY = "bulking-last-notif-schedule";
+
 export const usePushNotifications = () => {
     const [isMedian, setIsMedian] = useState(false);
     const [oneSignalId, setOneSignalId] = useState<string | null>(null);
@@ -132,11 +134,31 @@ export const usePushNotifications = () => {
 
             console.log(`Successfully synced ${meals.length} meals for 30 days using device local time: ${new Date().toString()}`);
             toast.success("Alarm jadwal makan telah diperbarui di HP!");
+            // Save timestamp of last successful schedule
+            localStorage.setItem(LAST_SCHEDULED_KEY, Date.now().toString());
         } catch (error) {
             console.error("Failed to sync meal reminders:", error);
             toast.error("Gagal sinkronisasi alarm.");
         }
     }, []);
+
+    // Auto-reschedule on app open if last schedule was > 23 hours ago
+    const scheduleIfNeeded = useCallback((meals: Meal[]) => {
+        if (!window.median || !window.median.localNotifications) return;
+        if (meals.length === 0) return;
+
+        const lastScheduled = localStorage.getItem(LAST_SCHEDULED_KEY);
+        const hoursSinceLast = lastScheduled
+            ? (Date.now() - Number(lastScheduled)) / (1000 * 60 * 60)
+            : Infinity;
+
+        if (hoursSinceLast > 23) {
+            console.log(`Auto-rescheduling notifications (last: ${hoursSinceLast.toFixed(1)}h ago)`);
+            syncMealReminders(meals);
+        } else {
+            console.log(`Notifications still fresh (last: ${hoursSinceLast.toFixed(1)}h ago), skipping reschedule`);
+        }
+    }, [syncMealReminders]);
 
     const testAlarm = useCallback(() => {
         if (!window.median || !window.median.localNotifications) {
@@ -175,6 +197,7 @@ export const usePushNotifications = () => {
         isRegistering,
         registerDevice,
         syncMealReminders,
+        scheduleIfNeeded,
         testAlarm,
     };
 };

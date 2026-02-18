@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
 import DashboardView from "@/components/DashboardView";
 import MealsView from "@/components/MealsView";
@@ -12,12 +12,20 @@ const Index = () => {
   const store = useBulkingStore();
   const push = usePushNotifications();
 
-  // Sync meal reminders whenever schedule changes
+  const isFirstLoad = useRef(true);
+
+  // On app open: auto-reschedule only if stale (>23h since last schedule)
+  // On meal change: always reschedule immediately
   useEffect(() => {
-    if (store.meals.length > 0) {
-      push.syncMealReminders(store.meals);
+    if (store.meals.length === 0) return;
+
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      push.scheduleIfNeeded(store.meals); // throttled — skips if still fresh
+    } else {
+      push.syncMealReminders(store.meals); // user changed schedule — always sync
     }
-  }, [store.meals, push.syncMealReminders]);
+  }, [store.meals, push.scheduleIfNeeded, push.syncMealReminders]);
 
   // Sync OneSignal ID to store if it exists and hasn't been saved
   useEffect(() => {
