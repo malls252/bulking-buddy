@@ -7,16 +7,7 @@ export interface MedianOneSignal {
 }
 
 export interface MedianLocalNotifications {
-    create: (data: {
-        id?: number;
-        title: string;
-        message: string;
-        at: string;
-        recurring?: 'daily' | 'weekly' | 'monthly' | 'yearly';
-        sound?: string;
-        vibrate?: boolean;
-        priority?: number;
-    }) => void;
+    create: (data: { title: string; message: string; at: string }) => void;
     cancelAll: () => void;
     requestPermission: () => void;
 }

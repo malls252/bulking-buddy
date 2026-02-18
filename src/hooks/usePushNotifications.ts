@@ -75,45 +75,38 @@ export const usePushNotifications = () => {
             // 1. Clear existing alarms to avoid duplicates
             window.median.localNotifications.cancelAll();
 
-            // 2. Schedule each meal with recurring daily setting
-            meals.forEach((meal, index) => {
+            // 2. Schedule each meal for the next 7 days to ensure daily recurrence
+            meals.forEach(meal => {
                 const [hours, minutes] = meal.time.split(":").map(Number);
 
-                const scheduledDate = new Date();
-                scheduledDate.setHours(hours, minutes, 0, 0);
+                for (let i = 0; i < 7; i++) {
+                    const scheduledDate = new Date();
+                    scheduledDate.setDate(scheduledDate.getDate() + i);
+                    scheduledDate.setHours(hours, minutes, 0, 0);
 
-                // If the time has already passed for today, scheduled for tomorrow
-                // But keep 'at' as today's time because 'recurring' handles the logic
-                // and the OS might need the base time. However, to be safe:
-                if (scheduledDate.getTime() <= Date.now()) {
-                    scheduledDate.setDate(scheduledDate.getDate() + 1);
+                    // If it's today and the time has already passed, skip to next day
+                    if (i === 0 && scheduledDate.getTime() <= Date.now()) {
+                        continue;
+                    }
+
+                    // Format as 'yyyy-MM-dd HH:mm:ss' (Some native bridges prefer this over ISO)
+                    const year = scheduledDate.getFullYear();
+                    const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(scheduledDate.getDate()).padStart(2, '0');
+                    const hh = String(scheduledDate.getHours()).padStart(2, '0');
+                    const mm = String(scheduledDate.getMinutes()).padStart(2, '0');
+                    const ss = '00';
+                    const localFormat = `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
+
+                    window.median!.localNotifications.create({
+                        title: `Waktunya ${meal.name}! 🍽️`,
+                        message: `Ayo makan tepat waktu (Jam HP: ${meal.time}). Semangat bulking!`,
+                        at: localFormat,
+                    });
                 }
-
-                // Format as 'yyyy-MM-dd HH:mm:ss'
-                const year = scheduledDate.getFullYear();
-                const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
-                const day = String(scheduledDate.getDate()).padStart(2, '0');
-                const hh = String(scheduledDate.getHours()).padStart(2, '0');
-                const mm = String(scheduledDate.getMinutes()).padStart(2, '0');
-                const ss = '00';
-                const localFormat = `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
-
-                // Consistent ID for each meal slot (100, 101, etc)
-                const notificationId = 100 + index;
-
-                window.median!.localNotifications.create({
-                    id: notificationId,
-                    title: `Waktunya ${meal.name}! 🍽️`,
-                    message: `Ayo makan sesuai jadwal (Jam HP: ${meal.time}). Semangat bulking!`,
-                    at: localFormat,
-                    recurring: 'daily',
-                    sound: 'default',
-                    vibrate: true,
-                    priority: 2, // High priority
-                });
             });
 
-            console.log(`Successfully synced ${meals.length} meals as recurring alarms.`);
+            console.log(`Successfully synced ${meals.length} meals for 7 days using device local time: ${new Date().toString()}`);
             toast.success("Alarm jadwal makan telah diperbarui di HP!");
         } catch (error) {
             console.error("Failed to sync meal reminders:", error);
@@ -140,11 +133,8 @@ export const usePushNotifications = () => {
         try {
             window.median.localNotifications.create({
                 title: "Tes Bulking Buddy! 🚀",
-                message: "Ini adalah notifikasi tes. Jika suara/getar muncul, alarm sudah aktif!",
+                message: "Ini adalah notifikasi tes. Jika Anda melihat ini, berarti alarm sudah berfungsi!",
                 at: localFormat,
-                sound: 'default',
-                vibrate: true,
-                priority: 2,
             });
             toast.success(`Tes alarm dikirim (akan muncul dalam 10 detik di jam ${hh}:${mm}:${ss})`);
             console.log("Test alarm scheduled at:", localFormat);
