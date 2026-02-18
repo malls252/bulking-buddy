@@ -19,6 +19,17 @@ const Index = () => {
     }
   }, [store.meals, push.syncMealReminders]);
 
+  // Sync OneSignal ID to store if it exists and hasn't been saved
+  useEffect(() => {
+    if (push.oneSignalId && push.oneSignalId !== store.goals.onesignal_id) {
+      console.log("Auto-syncing OneSignal ID to store:", push.oneSignalId);
+      store.setGoals({
+        ...store.goals,
+        onesignal_id: push.oneSignalId
+      });
+    }
+  }, [push.oneSignalId, store.goals, store.setGoals]);
+
   if (store.loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 pb-20">

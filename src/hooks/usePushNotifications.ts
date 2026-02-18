@@ -12,10 +12,14 @@ export const usePushNotifications = () => {
     const checkInfo = useCallback(() => {
         if (window.median && window.median.onesignal) {
             window.median.onesignal.getInfo((data) => {
+                console.log("Median Info Received:", data);
                 if (data && data.oneSignalUserId) {
                     setOneSignalId(data.oneSignalUserId);
                     setIsSubscribed(data.isSubscribed);
-                    if (data.isSubscribed) setIsRegistering(false);
+                    if (data.isSubscribed) {
+                        setIsRegistering(false);
+                        console.log("OneSignal Subscribed with ID:", data.oneSignalUserId);
+                    }
                 }
             });
         }
@@ -75,11 +79,11 @@ export const usePushNotifications = () => {
             // 1. Clear existing alarms to avoid duplicates
             window.median.localNotifications.cancelAll();
 
-            // 2. Schedule each meal for the next 7 days to ensure daily recurrence
+            // 2. Schedule each meal for the next 30 days to ensure daily recurrence
             meals.forEach(meal => {
                 const [hours, minutes] = meal.time.split(":").map(Number);
 
-                for (let i = 0; i < 7; i++) {
+                for (let i = 0; i < 30; i++) {
                     const scheduledDate = new Date();
                     scheduledDate.setDate(scheduledDate.getDate() + i);
                     scheduledDate.setHours(hours, minutes, 0, 0);
@@ -106,7 +110,7 @@ export const usePushNotifications = () => {
                 }
             });
 
-            console.log(`Successfully synced ${meals.length} meals for 7 days using device local time: ${new Date().toString()}`);
+            console.log(`Successfully synced ${meals.length} meals for 30 days using device local time: ${new Date().toString()}`);
             toast.success("Alarm jadwal makan telah diperbarui di HP!");
         } catch (error) {
             console.error("Failed to sync meal reminders:", error);

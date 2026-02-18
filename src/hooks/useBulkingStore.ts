@@ -121,6 +121,7 @@ export function useBulkingStore() {
             dailyCalories: goalsRes.data.daily_calories,
             dailyProtein: goalsRes.data.daily_protein,
             startDate: goalsRes.data.start_date,
+            onesignal_id: goalsRes.data.onesignal_id, // Add this
           });
         }
 
@@ -189,6 +190,7 @@ export function useBulkingStore() {
         daily_calories: newGoals.dailyCalories,
         daily_protein: newGoals.dailyProtein,
         start_date: newGoals.startDate,
+        onesignal_id: newGoals.onesignal_id, // Add this
         updated_at: new Date().toISOString(),
       });
     }

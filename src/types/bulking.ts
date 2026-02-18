@@ -34,4 +34,5 @@ export interface UserGoals {
   dailyCalories: number;
   dailyProtein: number;
   startDate: string;
+  onesignal_id?: string;
 }

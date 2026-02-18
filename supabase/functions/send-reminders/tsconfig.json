@@ -1,0 +1,12 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "paths": {
+            "https://esm.sh/@supabase/supabase-js@2": [
+                "../../../node_modules/@supabase/supabase-js"
+            ]
+        },
+        "moduleResolution": "bundler",
+        "noImplicitAny": false
+    }
+}
