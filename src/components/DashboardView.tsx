@@ -18,8 +18,6 @@ interface DashboardViewProps {
   isPushSubscribed: boolean;
   isRegistering: boolean;
   testAlarm: () => void;
-  isMedian: boolean;
-  isWebSupported: boolean;
 }
 
 export default function DashboardView({
@@ -37,8 +35,6 @@ export default function DashboardView({
   isPushSubscribed,
   isRegistering,
   testAlarm,
-  isMedian,
-  isWebSupported,
 }: DashboardViewProps) {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -54,8 +50,8 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Push Notification Card - Visible in Median or supported Browsers */}
-      {(isMedian || isWebSupported) && (
+      {/* Push Notification Card - Only visible in Median App */}
+      {((window as any).median) && (
         <div className={`glass-card rounded-2xl p-4 flex items-center justify-between border ${isPushSubscribed ? 'border-primary/20 bg-primary/5' : 'border-dashed border-muted-foreground/30'}`}>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl ${isPushSubscribed ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}`}>
