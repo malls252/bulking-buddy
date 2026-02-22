@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { Plus, Scale, TrendingUp, Target, Edit2, Camera, X, Trash2 } from "lucide-react";
-import type { WeightEntry, UserGoals } from "@/types/bulking";
+import CalendarCard from "./CalendarCard";
+import type { WeightEntry, UserGoals, Meal } from "@/types/bulking";
+
 
 interface ProgressViewProps {
   weightHistory: WeightEntry[];
@@ -12,7 +14,9 @@ interface ProgressViewProps {
   currentWeight: number;
   totalGain: number;
   setGoals: (goals: UserGoals) => void;
+  meals: Meal[];
 }
+
 
 export default function ProgressView({
   weightHistory,
@@ -22,8 +26,10 @@ export default function ProgressView({
   weightProgress,
   currentWeight,
   totalGain,
-  setGoals
+  setGoals,
+  meals
 }: ProgressViewProps) {
+
   const [showAdd, setShowAdd] = useState(false);
   const [showEditTarget, setShowEditTarget] = useState(false);
   const [newWeight, setNewWeight] = useState("");
@@ -218,7 +224,9 @@ export default function ProgressView({
       )}
 
       {/* Stats */}
+
       <div className="grid grid-cols-2 gap-3">
+
         <div className="glass-card rounded-xl p-4 space-y-1">
           <div className="flex items-center gap-2 text-primary">
             <Scale className="h-4 w-4" />
@@ -289,8 +297,12 @@ export default function ProgressView({
         </div>
       </div>
 
+      {/* Calendar Card */}
+      <CalendarCard meals={meals} weightHistory={weightHistory} />
+
       {/* Weight History */}
       <div className="glass-card rounded-xl p-4 space-y-3">
+
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Riwayat</h3>
         <div className="space-y-2">
           {(weightHistory || []).slice().reverse().map((e, i) => (

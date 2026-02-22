@@ -21,7 +21,7 @@ export default function MealsView({
 }: MealsViewProps) {
   const [showAddFood, setShowAddFood] = useState<string | null>(null);
   const [showAddMeal, setShowAddMeal] = useState(false);
-  const [newFood, setNewFood] = useState({ name: "", calories: "", protein: "", carbs: "", fat: "" });
+  const [newFood, setNewFood] = useState({ name: "", calories: "", portion: "" });
   const [newMeal, setNewMeal] = useState({ name: "", time: "12:00" });
 
   const handleAddFood = (mealId: string) => {
@@ -30,11 +30,12 @@ export default function MealsView({
       id: Date.now().toString(),
       name: newFood.name,
       calories: Number(newFood.calories) || 0,
-      protein: Number(newFood.protein) || 0,
-      carbs: Number(newFood.carbs) || 0,
-      fat: Number(newFood.fat) || 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      portion: newFood.portion || undefined,
     });
-    setNewFood({ name: "", calories: "", protein: "", carbs: "", fat: "" });
+    setNewFood({ name: "", calories: "", portion: "" });
     setShowAddFood(null);
   };
 
@@ -143,17 +144,20 @@ export default function MealsView({
                   onChange={(e) => setNewFood((p) => ({ ...p, name: e.target.value }))}
                   className="w-full rounded-lg bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
                 />
-                <div className="grid grid-cols-4 gap-2">
-                  {(["calories", "protein", "carbs", "fat"] as const).map((field) => (
-                    <input
-                      key={field}
-                      placeholder={field === "calories" ? "Kal" : field === "protein" ? "Pro" : field === "carbs" ? "Kar" : "Lem"}
-                      value={newFood[field]}
-                      onChange={(e) => setNewFood((p) => ({ ...p, [field]: e.target.value }))}
-                      type="number"
-                      className="rounded-lg bg-secondary px-2 py-2 text-sm text-center text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  ))}
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    placeholder="Kalori (kcal)"
+                    value={newFood.calories}
+                    onChange={(e) => setNewFood((p) => ({ ...p, calories: e.target.value }))}
+                    type="number"
+                    className="rounded-lg bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <input
+                    placeholder="Porsi (e.g. 100g)"
+                    value={newFood.portion}
+                    onChange={(e) => setNewFood((p) => ({ ...p, portion: e.target.value }))}
+                    className="rounded-lg bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
+                  />
                 </div>
                 <button onClick={() => handleAddFood(meal.id)} className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground">
                   Tambah
@@ -169,9 +173,7 @@ export default function MealsView({
                     <span className="text-sm">{food.name}</span>
                     <div className="flex gap-2 text-[10px] text-muted-foreground mt-0.5">
                       <span>{food.calories} kal</span>
-                      <span>P:{food.protein}g</span>
-                      <span>K:{food.carbs}g</span>
-                      <span>L:{food.fat}g</span>
+                      {food.portion && <span>· {food.portion}</span>}
                     </div>
                   </div>
                   <button

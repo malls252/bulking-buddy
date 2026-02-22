@@ -5,6 +5,7 @@ export interface FoodItem {
   protein: number;
   carbs: number;
   fat: number;
+  portion?: string;
 }
 
 export interface Meal {

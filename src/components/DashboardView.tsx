@@ -1,18 +1,20 @@
 import CalorieRing from "./CalorieRing";
 import MacroBar from "./MacroBar";
+import CalendarCard from "./CalendarCard";
 import { Flame, Dumbbell, Target, Clock, CheckCircle2, Circle, Bell, BellRing } from "lucide-react";
-import type { UserGoals, Meal } from "@/types/bulking";
+import type { UserGoals, Meal, WeightEntry } from "@/types/bulking";
+
+
 
 interface DashboardViewProps {
   totalCalories: number;
   totalProtein: number;
-  totalCarbs: number;
-  totalFat: number;
   goals: UserGoals;
   weightProgress: number;
   daysElapsed: number;
   currentWeight: number;
   meals: Meal[];
+  weightHistory: WeightEntry[];
   toggleMealCompletion: (id: string) => void;
   registerPush: () => void;
   isPushSubscribed: boolean;
@@ -20,22 +22,23 @@ interface DashboardViewProps {
   testAlarm: () => void;
 }
 
+
 export default function DashboardView({
   totalCalories,
   totalProtein,
-  totalCarbs,
-  totalFat,
   goals,
   weightProgress,
   daysElapsed,
   currentWeight,
   meals,
+  weightHistory,
   toggleMealCompletion,
   registerPush,
   isPushSubscribed,
   isRegistering,
   testAlarm,
 }: DashboardViewProps) {
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -84,10 +87,8 @@ export default function DashboardView({
       {/* Calorie Ring */}
       <div className="glass-card rounded-2xl p-6 flex flex-col items-center gap-4 glow-primary">
         <CalorieRing current={totalCalories} target={goals.dailyCalories} />
-        <div className="flex w-full justify-around">
+        <div className="flex w-full justify-center">
           <MacroBar label="Protein" value={totalProtein} color="hsl(82, 85%, 55%)" />
-          <MacroBar label="Karbo" value={totalCarbs} color="hsl(210, 80%, 55%)" />
-          <MacroBar label="Lemak" value={totalFat} color="hsl(38, 92%, 50%)" />
         </div>
       </div>
 
@@ -128,6 +129,8 @@ export default function DashboardView({
       </div>
 
       {/* Meal Schedule */}
+
+
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2 text-primary">
@@ -174,6 +177,9 @@ export default function DashboardView({
           ))}
         </div>
       </div>
+
+      {/* Calendar Card */}
+      <CalendarCard meals={meals} weightHistory={weightHistory} />
     </div>
   );
 }
