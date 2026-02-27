@@ -1,7 +1,7 @@
 import CalorieRing from "./CalorieRing";
 import MacroBar from "./MacroBar";
 import CalendarCard from "./CalendarCard";
-import { Flame, Dumbbell, Target, Clock, CheckCircle2, Circle, Bell, BellRing } from "lucide-react";
+import { Flame, Dumbbell, Target, Clock, CheckCircle2, Circle, Bell, BellRing, RotateCcw } from "lucide-react";
 import type { UserGoals, Meal, WeightEntry } from "@/types/bulking";
 
 
@@ -15,12 +15,16 @@ interface DashboardViewProps {
   currentWeight: number;
   meals: Meal[];
   weightHistory: WeightEntry[];
+  completedMealDates: string[];
   toggleMealCompletion: (id: string) => void;
+  uncheckAllMeals: () => void;
   registerPush: () => void;
   isPushSubscribed: boolean;
   isRegistering: boolean;
   testAlarm: () => void;
 }
+
+
 
 
 export default function DashboardView({
@@ -32,12 +36,18 @@ export default function DashboardView({
   currentWeight,
   meals,
   weightHistory,
+  completedMealDates,
   toggleMealCompletion,
+  uncheckAllMeals,
   registerPush,
   isPushSubscribed,
   isRegistering,
   testAlarm,
 }: DashboardViewProps) {
+
+
+  const hasCompletedMeals = meals.some(m => m.completed);
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -176,10 +186,23 @@ export default function DashboardView({
             </div>
           ))}
         </div>
+
+        {/* Uncheck All Button */}
+        {hasCompletedMeals && (
+          <button
+            onClick={uncheckAllMeals}
+            className="w-full glass-card rounded-xl p-3 flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all duration-300 border border-dashed border-muted-foreground/30"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span className="text-xs font-medium">Batal Checklist Semua</span>
+          </button>
+        )}
       </div>
 
+
       {/* Calendar Card */}
-      <CalendarCard meals={meals} weightHistory={weightHistory} />
+      <CalendarCard meals={meals} weightHistory={weightHistory} completedMealDates={completedMealDates} />
+
     </div>
   );
 }

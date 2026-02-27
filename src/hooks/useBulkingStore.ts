@@ -8,7 +8,9 @@ const STORAGE_KEYS = {
   MEALS: "bulking-meals",
   GOALS: "bulking-goals",
   WEIGHT_HISTORY: "bulking-weight-history",
+  COMPLETED_MEAL_DATES: "bulking-completed-meal-dates",
 };
+
 
 const defaultGoals: UserGoals = {
   targetWeight: 75,
@@ -74,7 +76,9 @@ export function useBulkingStore() {
   const [meals, setMeals] = useState<Meal[]>(defaultMeals);
   const [goals, setGoals] = useState<UserGoals>(defaultGoals);
   const [weightHistory, setWeightHistory] = useState<WeightEntry[]>(defaultWeightHistory);
+  const [completedMealDates, setCompletedMealDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
 
   const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -87,15 +91,18 @@ export function useBulkingStore() {
           const savedMeals = localStorage.getItem(STORAGE_KEYS.MEALS);
           const savedGoals = localStorage.getItem(STORAGE_KEYS.GOALS);
           const savedWeight = localStorage.getItem(STORAGE_KEYS.WEIGHT_HISTORY);
+          const savedCompletedDates = localStorage.getItem(STORAGE_KEYS.COMPLETED_MEAL_DATES);
           if (savedMeals) setMeals(JSON.parse(savedMeals));
           if (savedGoals) setGoals(JSON.parse(savedGoals));
           if (savedWeight) setWeightHistory(JSON.parse(savedWeight));
+          if (savedCompletedDates) setCompletedMealDates(JSON.parse(savedCompletedDates));
         } catch (e) {
           console.error("Failed to parse localStorage data:", e);
         }
         setLoading(false);
         return;
       }
+
 
       try {
         setLoading(true);
@@ -288,6 +295,39 @@ export function useBulkingStore() {
     });
   }, [isSupabaseConfigured]);
 
+  const uncheckAllMeals = useCallback(async () => {
+    setMeals(prev => {
+      // Check if all meals were completed before unchecking
+      const allCompleted = prev.length > 0 && prev.every(m => m.completed);
+      
+      if (allCompleted) {
+        // Save today's date as a completed date
+        const today = new Date().toISOString().split('T')[0];
+        setCompletedMealDates(dates => {
+          if (dates.includes(today)) return dates;
+          const updated = [...dates, today];
+          localStorage.setItem(STORAGE_KEYS.COMPLETED_MEAL_DATES, JSON.stringify(updated));
+          if (isSupabaseConfigured) {
+            supabase.from("completed_meal_dates").upsert({ date: today }).then();
+          }
+          return updated;
+        });
+      }
+      
+      const updatedMeals = prev.map(m => ({ ...m, completed: false }));
+      persistMeals(updatedMeals);
+      if (isSupabaseConfigured) {
+        // Update all meals to completed = false
+        Promise.all(prev.map(meal => 
+          supabase.from("meals").update({ completed: false }).eq("id", meal.id)
+        )).then();
+      }
+      return updatedMeals;
+    });
+  }, [isSupabaseConfigured]);
+
+
+
   const addWeightEntry = useCallback(async (entry: WeightEntry) => {
     let finalImageUrl = entry.image;
 
@@ -394,6 +434,7 @@ export function useBulkingStore() {
     goals,
     setGoals: saveGoals,
     weightHistory,
+    completedMealDates,
     totalCalories,
     totalProtein,
     totalCarbs,
@@ -404,6 +445,7 @@ export function useBulkingStore() {
     addMeal,
     removeMeal,
     toggleMealCompletion,
+    uncheckAllMeals,
     addWeightEntry,
     removeWeightEntry,
     weightProgress,
@@ -411,4 +453,6 @@ export function useBulkingStore() {
     daysElapsed,
     loading,
   };
+
+
 }

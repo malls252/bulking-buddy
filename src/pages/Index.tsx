@@ -60,13 +60,17 @@ const Index = () => {
             currentWeight={store.currentWeight}
             meals={store.meals}
             weightHistory={store.weightHistory}
+            completedMealDates={store.completedMealDates}
             toggleMealCompletion={store.toggleMealCompletion}
+            uncheckAllMeals={store.uncheckAllMeals}
             registerPush={push.registerDevice}
             isPushSubscribed={push.isSubscribed}
             isRegistering={push.isRegistering}
             testAlarm={push.testAlarm}
           />
         )}
+
+
 
         {activeTab === "meals" && (
           <MealsView
@@ -89,8 +93,10 @@ const Index = () => {
             totalGain={store.totalGain}
             setGoals={store.setGoals}
             meals={store.meals}
+            completedMealDates={store.completedMealDates}
           />
         )}
+
 
         {activeTab === "gallery" && (
           <GalleryView weightHistory={store.weightHistory} />

@@ -8,18 +8,28 @@ import { Scale, CheckCircle2 } from "lucide-react";
 interface CalendarCardProps {
   meals: Meal[];
   weightHistory: WeightEntry[];
+  completedMealDates: string[];
   className?: string;
 }
+
 
 export default function CalendarCard({
   meals,
   weightHistory,
+  completedMealDates,
   className,
 }: CalendarCardProps) {
+
   // Parse weight history dates into Date objects
   const weightDates = useMemo(() => {
     return weightHistory.map((entry) => new Date(entry.date));
   }, [weightHistory]);
+
+  // Parse completed meal dates into Date objects
+  const completedDates = useMemo(() => {
+    return completedMealDates.map((date) => new Date(date));
+  }, [completedMealDates]);
+
 
   // Check if all meals are completed (for today/active tracking)
   const allMealsCompleted = useMemo(() => {
@@ -48,10 +58,17 @@ export default function CalendarCard({
           onMonthChange={setDisplayedMonth}
           modifiers={{
             weightLogged: weightDates,
+            mealsCompleted: completedDates,
           }}
           modifiersStyles={{
             weightLogged: {
               backgroundColor: "hsl(142, 71%, 45%)",
+              color: "white",
+              borderRadius: "50%",
+              fontWeight: "bold",
+            },
+            mealsCompleted: {
+              backgroundColor: "hsl(221, 83%, 53%)",
               color: "white",
               borderRadius: "50%",
               fontWeight: "bold",
@@ -65,11 +82,16 @@ export default function CalendarCard({
       </div>
 
 
+
       {/* Legend */}
       <div className="flex items-center gap-4 pt-2 border-t border-border/50">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500" />
           <span className="text-xs text-muted-foreground">Timbang Badan</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-blue-600" />
+          <span className="text-xs text-muted-foreground">Meals Selesai</span>
         </div>
         <div className="flex items-center gap-2">
           {allMealsCompleted ? (
@@ -78,10 +100,11 @@ export default function CalendarCard({
             <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
           )}
           <span className="text-xs text-muted-foreground">
-            {allMealsCompleted ? "Semua meals selesai" : "Meals belum selesai"}
+            {allMealsCompleted ? "Hari ini selesai" : "Hari ini belum"}
           </span>
         </div>
       </div>
+
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 gap-2 pt-2">

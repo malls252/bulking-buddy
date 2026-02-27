@@ -15,7 +15,9 @@ interface ProgressViewProps {
   totalGain: number;
   setGoals: (goals: UserGoals) => void;
   meals: Meal[];
+  completedMealDates: string[];
 }
+
 
 
 export default function ProgressView({
@@ -27,8 +29,10 @@ export default function ProgressView({
   currentWeight,
   totalGain,
   setGoals,
-  meals
+  meals,
+  completedMealDates
 }: ProgressViewProps) {
+
 
   const [showAdd, setShowAdd] = useState(false);
   const [showEditTarget, setShowEditTarget] = useState(false);
@@ -298,7 +302,8 @@ export default function ProgressView({
       </div>
 
       {/* Calendar Card */}
-      <CalendarCard meals={meals} weightHistory={weightHistory} />
+      <CalendarCard meals={meals} weightHistory={weightHistory} completedMealDates={completedMealDates} />
+
 
       {/* Weight History */}
       <div className="glass-card rounded-xl p-4 space-y-3">
