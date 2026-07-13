@@ -229,9 +229,10 @@ export default function ProgressView({
 
       {/* Stats */}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-        <div className="glass-card rounded-xl p-4 space-y-1">
+        <div className="glass-card rounded-xl p-4 sm:p-5 space-y-1">
+
           <div className="flex items-center gap-2 text-primary">
             <Scale className="h-4 w-4" />
             <span className="text-[10px] font-semibold uppercase tracking-wider">Berat Saat Ini</span>
@@ -241,7 +242,8 @@ export default function ProgressView({
             <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
           </p>
         </div>
-        <div className="glass-card rounded-xl p-4 space-y-1">
+        <div className="glass-card rounded-xl p-4 sm:p-5 space-y-1">
+
           <div className="flex items-center gap-2 text-primary">
             <TrendingUp className="h-4 w-4" />
             <span className="text-[10px] font-semibold uppercase tracking-wider">Total Naik</span>
@@ -273,7 +275,8 @@ export default function ProgressView({
       {/* Chart */}
       <div className="glass-card rounded-xl p-4">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Grafik Berat Badan</h3>
-        <div className="h-48">
+        <div className="h-56 sm:h-64">
+
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid stroke="hsl(220, 15%, 18%)" strokeDasharray="3 3" />
@@ -326,7 +329,8 @@ export default function ProgressView({
                 </button>
               </div>
               {e.image && (
-                <div className="mt-1 w-full h-40 rounded-lg overflow-hidden border border-border/50">
+                <div className="mt-1 w-full h-32 sm:h-40 rounded-lg overflow-hidden border border-border/50">
+
                   <img src={e.image} alt={`Progress ${e.date}`} className="w-full h-full object-cover" />
                 </div>
               )}

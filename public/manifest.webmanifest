@@ -1,0 +1,16 @@
+{
+  "name": "Go Bulking",
+  "short_name": "Go Bulking",
+  "description": "Your Ultimate Weight Gain Companion",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0B0F1A",
+  "theme_color": "#52D17A",
+  "icons": [
+    {"src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon"},
+    {"src": "/favicon.ico", "sizes": "72x72", "type": "image/x-icon"},
+    {"src": "/favicon.ico", "sizes": "96x96", "type": "image/x-icon"}
+  ]
+}
+

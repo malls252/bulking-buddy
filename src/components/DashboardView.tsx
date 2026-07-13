@@ -103,17 +103,20 @@ export default function DashboardView({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="glass-card rounded-xl p-4 space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="glass-card rounded-xl p-4 sm:p-5 space-y-2">
           <div className="flex items-center gap-2 text-primary">
             <Flame className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Kalori Sisa</span>
           </div>
+
+
           <p className="text-2xl font-bold">{Math.max(0, goals.dailyCalories - totalCalories)}</p>
           <p className="text-[10px] text-muted-foreground">kcal lagi</p>
         </div>
 
-        <div className="glass-card rounded-xl p-4 space-y-2">
+        <div className="glass-card rounded-xl p-4 sm:p-5 space-y-2">
+
           <div className="flex items-center gap-2 text-primary">
             <Dumbbell className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Berat Badan</span>
@@ -124,7 +127,8 @@ export default function DashboardView({
       </div>
 
       {/* Weight Progress */}
-      <div className="glass-card rounded-xl p-4 space-y-3">
+      <div className="glass-card rounded-xl p-4 sm:p-5 space-y-3">
+
         <div className="flex items-center gap-2 text-primary">
           <Target className="h-4 w-4" />
           <span className="text-xs font-semibold uppercase tracking-wider">Progress Bulking</span>

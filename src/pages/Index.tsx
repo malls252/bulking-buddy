@@ -40,7 +40,7 @@ const Index = () => {
 
   if (store.loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 pb-20">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 safe-bottom">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary border-r-transparent"></div>
         <p className="mt-4 text-sm font-medium text-muted-foreground animate-pulse">Menghubungkan ke database...</p>
       </div>
@@ -48,8 +48,8 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="mx-auto max-w-lg px-4 pt-6">
+    <div className="min-h-screen bg-background safe-bottom">
+      <div className="mx-auto w-full max-w-2xl xl:max-w-4xl px-4 pt-6">
         {activeTab === "dashboard" && (
           <DashboardView
             totalCalories={store.totalCalories}

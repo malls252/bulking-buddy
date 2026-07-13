@@ -15,14 +15,14 @@ const tabs = [
 export default function BottomNav({ active, onChange }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card safe-bottom">
-      <div className="mx-auto flex max-w-lg items-center justify-around py-2">
+      <div className="mx-auto flex max-w-lg items-center justify-around py-2 px-1">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-all duration-200 ${isActive
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-200 ${isActive
                 ? "text-primary glow-primary"
                 : "text-muted-foreground hover:text-foreground"
                 }`}

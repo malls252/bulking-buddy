@@ -42,7 +42,8 @@ export default function CalendarCard({
 
 
   return (
-    <div className={cn("glass-card rounded-2xl p-4 space-y-3", className)}>
+    <div className={cn("glass-card rounded-2xl p-4 sm:p-5 space-y-3", className)}>
+
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-foreground">Kalender Bulking</h3>
         <span className="text-xs text-muted-foreground">
